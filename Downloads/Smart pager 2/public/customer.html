@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Call | Table Service</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body class="customer-page">
+    <main class="customer-shell">
+      <section class="card customer-card premium-customer-card">
+        <div class="brand-row">
+          <img class="brand-logo small-brand-logo" src="https://cdn.quickress.com/logo/19_17785102243971.jpeg" alt="Daily Sips logo" />
+          <span id="outletBadge" class="brand-badge">🍽️ Restaurant</span>
+          <span id="outletName" class="brand-name">Call Demo</span>
+        </div>
+
+        <div class="customer-header">
+          <p class="eyebrow">Table service</p>
+          <h1 id="tableTitle">Table 1</h1>
+        </div>
+        <p class="subtitle">Select what you need and our team will assist quickly.</p>
+
+        <div class="stacked-actions">
+          <button class="primary-button" data-kind="waiter">Call Waiter</button>
+          <button class="secondary-button" data-kind="cashier">Call Cashier</button>
+          <button class="accent-button" data-kind="order">Need Order Help</button>
+        </div>
+
+        <div class="service-note">No app needed • Fast response • Pickup alerts</div>
+
+        <div id="status" class="status-message" aria-live="polite">
+          Ready to send your request.
+        </div>
+      </section>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/customer.js"></script>
+  </body>
+</html>
