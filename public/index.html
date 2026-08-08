@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QCall System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+      padding: 2rem;
+    }
+    h1 { font-size: 3rem; color: #38bdf8; margin-bottom: 1rem; }
+    p { font-size: 1.2rem; color: #94a3b8; margin-bottom: 2rem; }
+    .buttons { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+    a {
+      padding: 1rem 2rem;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    a:hover { opacity: 0.85; }
+    .cashier { background: #38bdf8; color: #0f172a; }
+  </style>
+</head>
+<body>
+  <h1>⚡ QCall</h1>
+  <p>Smart QR Order Notification System</p>
+  <div class="buttons">
+    <a href="/cashier.html" class="cashier">Cashier Screen</a>
+  </div>
+</body>
+</html>
