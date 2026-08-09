@@ -1,8 +1,10 @@
+require('dotenv').config();
 const express = require('express');
 const http = require('http');
 const path = require('path');
 const QRCode = require('qrcode');
 const { Server } = require('socket.io');
+const webpush = require('web-push');
 
 const app = express();
 const server = http.createServer(app);
@@ -10,8 +12,15 @@ const io = new Server(server);
 
 const PORT = process.env.PORT || 3000;
 
+webpush.setVapidDetails(
+  'mailto:admin@qcall.app',
+  process.env.VAPID_PUBLIC_KEY,
+  process.env.VAPID_PRIVATE_KEY
+);
+
 const activeOrders = new Map();
 const reminderIntervals = new Map();
+const pushSubscriptions = new Map();
 let orderCounter = 100;
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -19,12 +28,24 @@ app.use(express.json());
 
 app.get('/', (req, res) =>
   res.sendFile(path.join(__dirname, 'public', 'index.html')));
-
 app.get(['/cashier', '/cashier.html'], (req, res) =>
   res.sendFile(path.join(__dirname, 'public', 'cashier.html')));
-
 app.get(['/customer', '/customer.html'], (req, res) =>
   res.sendFile(path.join(__dirname, 'public', 'customer.html')));
+app.get(['/archive', '/archive.html'], (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'archive.html')));
+
+app.get('/api/vapidPublicKey', (req, res) => {
+  res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
+});
+
+app.post('/api/subscribe', (req, res) => {
+  const { orderId, subscription } = req.body;
+  if (orderId && subscription) {
+    pushSubscriptions.set(String(orderId), subscription);
+  }
+  res.json({ success: true });
+});
 
 app.post('/api/orders/create', async (req, res) => {
   orderCounter++;
@@ -42,20 +63,17 @@ app.post('/api/orders/create', async (req, res) => {
       qrCodeDataUrl,
       createdAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
-
     activeOrders.set(orderId, order);
     io.emit('orders_updated', getOrdersList());
-
     res.json({ success: true, ...order });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Failed to generate QR Code' });
   }
 });
 
-app.post('/api/orders/call', (req, res) => {
+app.post('/api/orders/call', async (req, res) => {
   const { orderId } = req.body;
   const order = activeOrders.get(String(orderId));
-
   if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
   order.status = 'READY';
@@ -66,18 +84,40 @@ app.post('/api/orders/call', (req, res) => {
     message: `Order #${orderId} is ready! Please come pick it up.`
   });
 
+  const subscription = pushSubscriptions.get(String(orderId));
+  if (subscription) {
+    try {
+      await webpush.sendNotification(subscription, JSON.stringify({
+        title: '🎉 Your order is ready!',
+        body: `Order #${orderId} is waiting for you at the counter!`,
+        orderId
+      }));
+    } catch (e) {
+      console.log('Push failed:', e.message);
+    }
+  }
+
   if (reminderIntervals.has(String(orderId))) {
     clearInterval(reminderIntervals.get(String(orderId)));
   }
-
-  const timer = setInterval(() => {
+  const timer = setInterval(async () => {
     io.to(`order_${orderId}`).emit('order_ready', {
       orderId,
-      message: `Reminder: Order #${orderId} is still waiting for you!`
+      message: `Reminder: Order #${orderId} is still waiting!`
     });
+    const sub = pushSubscriptions.get(String(orderId));
+    if (sub) {
+      try {
+        await webpush.sendNotification(sub, JSON.stringify({
+          title: '⏰ Reminder',
+          body: `Order #${orderId} is still waiting at the counter!`,
+          orderId
+        }));
+      } catch(e) {}
+    }
   }, 3 * 60 * 1000);
-
   reminderIntervals.set(String(orderId), timer);
+
   io.emit('orders_updated', getOrdersList());
   res.json({ success: true, message: `Order #${orderId} called.` });
 });
@@ -91,6 +131,7 @@ function removeOrder(orderId) {
     clearInterval(reminderIntervals.get(String(orderId)));
     reminderIntervals.delete(String(orderId));
   }
+  pushSubscriptions.delete(String(orderId));
   activeOrders.delete(String(orderId));
   io.emit('orders_updated', getOrdersList());
 }

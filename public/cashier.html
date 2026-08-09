@@ -7,76 +7,157 @@
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;padding:1.5rem}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
     header h1{font-size:1.8rem;color:#38bdf8}
-    header span{font-size:.9rem;color:#64748b}
-    .new-order-btn{display:block;width:100%;padding:1.2rem;background:#38bdf8;color:#0f172a;font-size:1.3rem;font-weight:700;border:none;border-radius:14px;cursor:pointer;margin-bottom:2rem}
+    .header-links{display:flex;gap:.8rem}
+    .header-links a{padding:.6rem 1.2rem;background:#1e293b;color:#94a3b8;border:none;border-radius:10px;font-size:.9rem;text-decoration:none}
+    .new-order-btn{display:block;width:100%;padding:1.2rem;background:#38bdf8;color:#0f172a;font-size:1.3rem;font-weight:700;border:none;border-radius:14px;cursor:pointer;margin-bottom:1.5rem}
+    .section-title{font-size:1rem;font-weight:600;color:#64748b;margin-bottom:.8rem;text-transform:uppercase;letter-spacing:.05em}
+    .orders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem;margin-bottom:2rem}
+    .order-card{background:#1e293b;border-radius:14px;padding:1.2rem;display:flex;flex-direction:column;align-items:center;gap:.8rem;border:2px solid transparent}
+    .order-card.called{border-color:#22c55e}
+    .order-number{font-size:2.5rem;font-weight:800;color:#38bdf8}
+    .order-time{font-size:.85rem;color:#64748b}
+    .status-badge{padding:.3rem 1rem;border-radius:20px;font-size:.85rem;font-weight:600}
+    .status-badge.preparing{background:#fbbf24;color:#0f172a}
+    .status-badge.called{background:#22c55e;color:#0f172a}
+    .btn{width:100%;padding:.7rem;border:none;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer}
+    .call-btn{background:#22c55e;color:#0f172a}
+    .print-btn{background:#334155;color:#94a3b8}
+    .empty{text-align:center;color:#475569;padding:2rem;font-size:1rem}
     .qr-popup{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);align-items:center;justify-content:center;z-index:100;flex-direction:column;gap:1rem}
     .qr-popup.show{display:flex}
     .qr-popup img{width:260px;height:260px;border-radius:16px;background:white;padding:1rem}
     .qr-popup h2{font-size:1.5rem;color:#38bdf8}
     .qr-popup p{color:#94a3b8}
-    .qr-popup button{padding:.8rem 2rem;background:#ef4444;color:white;border:none;border-radius:10px;font-size:1rem;cursor:pointer}
-    .orders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:1rem}
-    .order-card{background:#1e293b;border-radius:14px;padding:1.2rem;display:flex;flex-direction:column;align-items:center;gap:.8rem;border:2px solid transparent}
-    .order-card.ready{border-color:#22c55e}
-    .order-number{font-size:2.5rem;font-weight:800;color:#38bdf8}
-    .order-time{font-size:.85rem;color:#64748b}
-    .status-badge{padding:.3rem 1rem;border-radius:20px;font-size:.85rem;font-weight:600}
-    .status-badge.preparing{background:#fbbf24;color:#0f172a}
-    .status-badge.ready{background:#22c55e;color:#0f172a}
-    .call-btn{width:100%;padding:.7rem;background:#22c55e;color:#0f172a;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer}
-    .call-btn:disabled{background:#334155;color:#64748b;cursor:default}
-    .empty{text-align:center;color:#475569;padding:3rem;font-size:1.1rem}
+    .popup-btns{display:flex;gap:1rem}
+    .popup-btns button{padding:.8rem 1.5rem;border:none;border-radius:10px;font-size:1rem;cursor:pointer;font-weight:600}
+    .close-btn{background:#ef4444;color:white}
+    .print-receipt-btn{background:#38bdf8;color:#0f172a}
+    @media print{
+      body>*{display:none}
+      #printArea{display:block!important;text-align:center;font-family:'Segoe UI',sans-serif}
+      #printArea h2{font-size:1.5rem;margin-bottom:.5rem}
+      #printArea p{font-size:1rem;color:#333;margin-bottom:1rem}
+      #printArea img{width:200px;height:200px}
+      #printArea .footer{margin-top:1rem;font-size:.85rem;color:#666}
+    }
+    #printArea{display:none}
   </style>
 </head>
 <body>
 <header>
-  <h1>⚡ QCall — Cashier</h1>
-  <span id="orderCount">0 active orders</span>
+  <h1>⚡ QCall</h1>
+  <div class="header-links">
+    <a href="/display.html" target="_blank">🖥️ Display</a>
+    <a href="/archive.html">📁 Archive</a>
+  </div>
 </header>
+
 <button class="new-order-btn" onclick="createOrder()">+ New Order</button>
-<div id="ordersGrid" class="orders-grid"><p class="empty">No active orders yet.</p></div>
+
+<div class="section-title">🟡 Preparing (<span id="prepCount">0</span>)</div>
+<div id="preparingGrid" class="orders-grid"><p class="empty">No orders yet.</p></div>
+
+<div class="section-title">🟢 Called (<span id="calledCount">0</span>)</div>
+<div id="calledGrid" class="orders-grid"><p class="empty">No called orders.</p></div>
+
 <div class="qr-popup" id="qrPopup">
   <h2>Order <span id="popupOrderId"></span></h2>
   <img id="popupQR" src="" alt="QR Code"/>
-  <p>Show this QR to the customer to scan</p>
-  <button onclick="closeQR()">Close</button>
+  <p>Show or print this QR for the customer</p>
+  <div class="popup-btns">
+    <button class="close-btn" onclick="closeQR()">Close</button>
+    <button class="print-receipt-btn" onclick="printReceipt()">🖨️ Print Receipt</button>
+  </div>
 </div>
+
+<div id="printArea">
+  <h2>⚡ QCall</h2>
+  <p>Order <span id="printOrderId"></span></p>
+  <p>Scan the QR code to track your order</p>
+  <img id="printQR" src="" alt="QR"/>
+  <div class="footer">Thank you! Your order will be ready soon.</div>
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script>
-  const socket=io();
-  socket.on('orders_updated',(orders)=>renderOrders(orders));
-  async function createOrder(){
-    const res=await fetch('/api/orders/create',{method:'POST'});
-    const data=await res.json();
-    if(data.success)showQR(data.orderId,data.qrCodeDataUrl);
+  const socket = io();
+  let currentOrder = null;
+
+  socket.on('orders_updated', (orders) => renderOrders(orders));
+
+  async function createOrder() {
+    const res = await fetch('/api/orders/create', { method: 'POST' });
+    const data = await res.json();
+    if (data.success) showQR(data.orderId, data.qrCodeDataUrl);
   }
-  async function callOrder(orderId){
-    await fetch('/api/orders/call',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId})});
+
+  async function callOrder(orderId) {
+    await fetch('/api/orders/call', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId })
+    });
   }
-  function showQR(orderId,qrDataUrl){
-    document.getElementById('popupOrderId').textContent='#'+orderId;
-    document.getElementById('popupQR').src=qrDataUrl;
+
+  function showQR(orderId, qrDataUrl) {
+    currentOrder = { orderId, qrDataUrl };
+    document.getElementById('popupOrderId').textContent = '#' + orderId;
+    document.getElementById('popupQR').src = qrDataUrl;
     document.getElementById('qrPopup').classList.add('show');
   }
-  function closeQR(){document.getElementById('qrPopup').classList.remove('show');}
-  function renderOrders(orders){
-    const grid=document.getElementById('ordersGrid');
-    const count=document.getElementById('orderCount');
-    count.textContent=orders.length+' active order'+(orders.length!==1?'s':'');
-    if(!orders.length){grid.innerHTML='<p class="empty">No active orders yet.</p>';return;}
-    grid.innerHTML=orders.map(order=>`
-      <div class="order-card ${order.status==='READY'?'ready':''}">
+
+  function closeQR() {
+    document.getElementById('qrPopup').classList.remove('show');
+  }
+
+  function printReceipt() {
+    if (!currentOrder) return;
+    document.getElementById('printOrderId').textContent = '#' + currentOrder.orderId;
+    document.getElementById('printQR').src = currentOrder.qrDataUrl;
+    window.print();
+  }
+
+  function saveToArchive(order) {
+    const archive = JSON.parse(localStorage.getItem('qcall_archive') || '[]');
+    archive.push({
+      orderId: order.orderId,
+      createdAt: order.createdAt,
+      completedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+    localStorage.setItem('qcall_archive', JSON.stringify(archive));
+  }
+
+  function renderOrders(orders) {
+    const preparing = orders.filter(o => o.status === 'PREPARING');
+    const called = orders.filter(o => o.status === 'READY');
+
+    document.getElementById('prepCount').textContent = preparing.length;
+    document.getElementById('calledCount').textContent = called.length;
+
+    const prepGrid = document.getElementById('preparingGrid');
+    const calledGrid = document.getElementById('calledGrid');
+
+    prepGrid.innerHTML = preparing.length ? preparing.map(order => `
+      <div class="order-card">
         <div class="order-number">#${order.orderId}</div>
         <div class="order-time">${order.createdAt}</div>
-        <span class="status-badge ${order.status==='READY'?'ready':'preparing'}">${order.status==='READY'?'Ready':'Preparing'}</span>
-        <button class="call-btn" onclick="callOrder('${order.orderId}')" ${order.status==='READY'?'disabled':''}>
-          ${order.status==='READY'?'Called ✓':'Call Customer'}
-        </button>
-      </div>`).join('');
+        <span class="status-badge preparing">Preparing</span>
+        <button class="btn call-btn" onclick="callOrder('${order.orderId}')">Call Customer</button>
+        <button class="btn print-btn" onclick="showQR('${order.orderId}', '${order.qrCodeDataUrl}')">🖨️ Print QR</button>
+      </div>`).join('') : '<p class="empty">No orders being prepared.</p>';
+
+    calledGrid.innerHTML = called.length ? called.map(order => `
+      <div class="order-card called">
+        <div class="order-number">#${order.orderId}</div>
+        <div class="order-time">${order.createdAt}</div>
+        <span class="status-badge called">Called ✓</span>
+        <p style="font-size:.85rem;color:#64748b">Waiting for customer...</p>
+      </div>`).join('') : '<p class="empty">No called orders.</p>';
   }
-  fetch('/api/orders/list').then(r=>r.json()).then(data=>renderOrders(data.orders));
+
+  fetch('/api/orders/list').then(r => r.json()).then(data => renderOrders(data.orders || []));
 </script>
 </body>
 </html>

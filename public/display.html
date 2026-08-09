@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QCall - Display</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2rem}
+    .order-number{font-size:5rem;font-weight:800;color:#38bdf8;margin-bottom:1rem}
+    .qr-box{background:white;padding:1.5rem;border-radius:20px;margin-bottom:1.5rem}
+    .qr-box img{width:280px;height:280px}
+    .status{font-size:1.4rem;color:#94a3b8}
+    .status.ready{color:#22c55e;font-weight:700;font-size:2rem}
+    .waiting{color:#64748b;font-size:1.1rem;margin-top:2rem}
+    .logo{font-size:1.2rem;color:#334155;margin-top:2rem}
+  </style>
+</head>
+<body>
+  <div id="main">
+    <div class="waiting">Waiting for new order...</div>
+  </div>
+  <div class="logo">⚡ QCall</div>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  const main = document.getElementById('main');
+
+  socket.on('orders_updated', (orders) => {
+    const preparing = orders.filter(o => o.status === 'PREPARING');
+    const latest = preparing[preparing.length - 1];
+    if (!latest) {
+      main.innerHTML = '<div class="waiting">Waiting for new order...</div>';
+      return;
+    }
+    main.innerHTML = `
+      <div class="order-number">#${latest.orderId}</div>
+      <div class="qr-box"><img src="${latest.qrCodeDataUrl}" alt="QR Code"/></div>
+      <div class="status">Scan to track your order</div>`;
+  });
+
+  socket.on('connect', () => {
+    fetch('/api/orders/list')
+      .then(r => r.json())
+      .then(data => {
+        const preparing = (data.orders || []).filter(o => o.status === 'PREPARING');
+        const latest = preparing[preparing.length - 1];
+        if (!latest) return;
+        main.innerHTML = `
+          <div class="order-number">#${latest.orderId}</div>
+          <div class="qr-box"><img src="${latest.qrCodeDataUrl}" alt="QR Code"/></div>
+          <div class="status">Scan to track your order</div>`;
+      });
+  });
+</script>
+</body>
+</html>
