@@ -114,3 +114,13 @@ io.on('connection', (socket) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => console.log(`🚀 QCall Server running on port ${PORT}`));
+
+app.get('/api/orders/status', (req, res) => {
+  const o = activeOrders.get(String(req.query.orderId));
+  res.json({ status: o ? o.status : 'NOT_FOUND' });
+});
+
+app.post('/api/orders/acknowledge', (req, res) => {
+  removeOrder(String(req.body.orderId));
+  res.json({ success: true });
+});
