@@ -113,7 +113,6 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => console.log('Socket disconnected:', socket.id));
 });
 
-server.listen(PORT, '0.0.0.0', () => console.log(`🚀 QCall Server running on port ${PORT}`));
 
 app.get('/api/orders/status', (req, res) => {
   const o = activeOrders.get(String(req.query.orderId));
@@ -124,3 +123,5 @@ app.post('/api/orders/acknowledge', (req, res) => {
   removeOrder(String(req.body.orderId));
   res.json({ success: true });
 });
+
+server.listen(PORT, '0.0.0.0', () => console.log('🚀 QCall Server running on port ' + PORT));
