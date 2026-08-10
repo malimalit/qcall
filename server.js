@@ -8,7 +8,7 @@ const webpush = require('web-push');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { transports: ["websocket", "polling"], cors: { origin: "*" } });
+const io = new Server(server, { transports: ["polling", "websocket"], cors: { origin: "*" } });
 
 const PORT = process.env.PORT || 3000;
 
