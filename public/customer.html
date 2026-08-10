@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <link rel="manifest" href="/manifest.json"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="manifest" href="/manifest.json"/>
   <title>QCall - Your Order</title>
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
@@ -13,10 +13,11 @@
     .status-text{font-size:1.4rem;font-weight:600;color:#94a3b8}
     .spinner{width:50px;height:50px;border:5px solid #334155;border-top-color:#38bdf8;border-radius:50%;animation:spin 1s linear infinite}
     @keyframes spin{to{transform:rotate(360deg)}}
-    .allow-btn{width:100%;padding:1rem;background:#1e40af;color:white;border:none;border-radius:12px;font-size:1.1rem;font-weight:700;cursor:pointer}
-    .allow-btn.done{background:#166534}
+    .allow-btn{width:100%;padding:1rem;background:#1e40af;color:white;border:none;border-radius:12px;font-size:1.1rem;font-weight:700;cursor:pointer;transition:all .3s}
+    .allow-btn.done{background:#166534;pointer-events:none}
+    .allow-btn:disabled{opacity:.7}
     .popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:999;align-items:center;justify-content:center}
-    .popup-overlay.show{display:flex}
+    .popup-overlay.show{display:flex !important}
     .popup-box{background:#14532d;border:3px solid #22c55e;border-radius:24px;padding:2.5rem 2rem;width:90%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:1.2rem;animation:popIn .3s ease}
     @keyframes popIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
     .popup-icon{font-size:4rem}
@@ -31,7 +32,7 @@
   <div class="order-number" id="orderNum">—</div>
   <div class="spinner" id="spinner"></div>
   <div class="status-text" id="statusText">Connecting...</div>
-  <button class="allow-btn" id="allowBtn" onclick="enableNotifications()">🔔 Allow Sound & Notifications</button>
+  <button class="allow-btn" id="allowBtn" onclick="enableSound()">🔔 Allow Sound & Notifications</button>
 </div>
 
 <div class="popup-overlay" id="popupOverlay">
@@ -39,7 +40,7 @@
     <div class="popup-icon">🎉</div>
     <div class="popup-title">Order Ready!</div>
     <div class="popup-msg" id="popupMsg">Your order is waiting at the counter!</div>
-    <button class="popup-btn" id="popupBtn">✅ Got it! I'm on my way</button>
+    <button class="popup-btn" onclick="dismissPopup()">✅ Got it! I'm on my way</button>
   </div>
 </div>
 
@@ -53,12 +54,12 @@
   const allowBtn = document.getElementById('allowBtn');
   const popupOverlay = document.getElementById('popupOverlay');
   const popupMsg = document.getElementById('popupMsg');
-  const popupBtn = document.getElementById('popupBtn');
   let audioCtx = null;
   let soundInterval = null;
   let socket = null;
+  let isReady = false;
 
-  function beep() {
+  function playBeep() {
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       audioCtx.resume().then(() => {
@@ -78,88 +79,85 @@
     try {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       audioCtx.resume().then(() => {
-        const notes = [523, 659, 784, 1047, 784, 1047, 1047, 784, 1047];
-        notes.forEach((freq, i) => {
+        [523,659,784,1047,784,1047,1047,784,1047].forEach((freq,i) => {
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
           osc.connect(gain); gain.connect(audioCtx.destination);
           osc.frequency.value = freq; osc.type = 'sine';
-          gain.gain.setValueAtTime(0.8, audioCtx.currentTime + i * 0.2);
-          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (i+1) * 0.2);
-          osc.start(audioCtx.currentTime + i * 0.2);
-          osc.stop(audioCtx.currentTime + (i+1) * 0.2);
+          gain.gain.setValueAtTime(0.8, audioCtx.currentTime + i*0.2);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + (i+1)*0.2);
+          osc.start(audioCtx.currentTime + i*0.2);
+          osc.stop(audioCtx.currentTime + (i+1)*0.2);
         });
       });
     } catch(e) {}
   }
 
-  async function enableNotifications() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    await audioCtx.resume();
-    beep();
-
+  async function enableSound() {
+    allowBtn.disabled = true;
+    allowBtn.textContent = '⏳ Setting up...';
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      await audioCtx.resume();
+      playBeep();
+      // Try push notifications
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        try {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            const reg = await navigator.serviceWorker.register('/sw.js');
+            await navigator.serviceWorker.ready;
+            const res = await fetch('/api/vapidPublicKey');
+            const { publicKey } = await res.json();
+            const sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: publicKey
+            });
+            await fetch('/api/subscribe', {
+              method: 'POST',
+              headers: {'Content-Type':'application/json'},
+              body: JSON.stringify({ orderId, subscription: sub, url: window.location.href })
+            });
+          }
+        } catch(e) { console.log('Push failed, using socket only:', e.message); }
+      }
+    } catch(e) {}
     allowBtn.textContent = '✅ Sound enabled!';
     allowBtn.classList.add('done');
-    allowBtn.disabled = true;
-
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
-      try {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          const reg = await navigator.serviceWorker.register('/sw.js');
-          await navigator.serviceWorker.ready;
-          const res = await fetch('/api/vapidPublicKey');
-          const { publicKey } = await res.json();
-          const sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: publicKey
-          });
-          const trackingUrl = window.location.href;
-          await fetch('/api/subscribe', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orderId, subscription: sub, url: trackingUrl })
-          });
-        }
-      } catch(e) { console.log('Push setup failed:', e.message); }
-    }
+    if (isReady) showPopup();
   }
 
   function showPopup() {
+    isReady = true;
     spinner.style.display = 'none';
     statusText.textContent = '🎉 Your order is ready!';
     statusText.style.color = '#22c55e';
     popupMsg.textContent = 'Order #' + orderId + ' is waiting at the counter!';
-    popupOverlay.classList.add('show');
+    popupOverlay.style.display = 'flex';
     playReadySound();
+    if (soundInterval) clearInterval(soundInterval);
     soundInterval = setInterval(playReadySound, 5000);
   }
 
   function dismissPopup() {
-    popupOverlay.classList.remove('show');
+    popupOverlay.style.display = 'none';
     if (soundInterval) { clearInterval(soundInterval); soundInterval = null; }
     statusText.textContent = 'Great! Please pick up your order.';
     statusText.style.color = '#94a3b8';
-  }
-
-  popupBtn.addEventListener('click', () => {
-    dismissPopup();
     if (socket) socket.emit('order_acknowledged', { orderId });
-  });
+  }
 
   if (!orderId) {
     orderNum.textContent = '?';
     spinner.style.display = 'none';
     allowBtn.style.display = 'none';
     statusText.textContent = 'No order found. Please scan again.';
-    statusText.classList.add('not-found');
   } else {
     orderNum.textContent = '#' + orderId;
-    socket = io();
+    socket = io({ transports: ['polling', 'websocket'] });
 
     socket.on('connect', () => {
       statusText.textContent = 'Waiting for your order...';
-      spinner.style.display = 'block';
       socket.emit('join_order', { orderId });
     });
 
@@ -174,15 +172,16 @@
         spinner.style.display = 'none';
         allowBtn.style.display = 'none';
         statusText.textContent = 'Order not found. Please ask the cashier.';
-        statusText.classList.add('not-found');
-      } else {
-        spinner.style.display = 'block';
-        statusText.textContent = 'Your order is being prepared...';
       }
     });
 
     socket.on('order_ready', () => showPopup());
   }
+
+  document.addEventListener('touchstart', () => {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume();
+  }, { once: true });
 </script>
 </body>
 </html>
