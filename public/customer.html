@@ -13,8 +13,8 @@ body{font-family:sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;di
 .spinner{width:50px;height:50px;border:5px solid #334155;border-top-color:#38bdf8;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .allow-btn{width:100%;padding:1rem;background:#1e40af;color:white;border:none;border-radius:12px;font-size:1.1rem;font-weight:700;cursor:pointer}
-.allow-btn.done{background:#166534}
-.popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;align-items:center;justify-content:center}
+.allow-btn.done{background:#166534;pointer-events:none}
+.popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center}
 .popup-box{background:#14532d;border:3px solid #22c55e;border-radius:24px;padding:2.5rem 2rem;width:90%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:1.2rem;animation:popIn .3s ease}
 @keyframes popIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 .popup-icon{font-size:4rem}
@@ -27,119 +27,90 @@ body{font-family:sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;di
 <div class="card">
   <div class="order-number" id="orderNum">—</div>
   <div class="spinner" id="spinner"></div>
-  <div class="status-text" id="statusText">Connecting...</div>
+  <div class="status-text" id="statusText">Press Allow Sound to start</div>
   <button class="allow-btn" id="allowBtn" onclick="enableSound()">🔔 Allow Sound & Notifications</button>
 </div>
-<div class="popup-overlay" id="popupOverlay">
+<div class="popup-overlay" id="overlay">
   <div class="popup-box">
     <div class="popup-icon">🎉</div>
     <div class="popup-title">Order Ready!</div>
-    <div class="popup-msg" id="popupMsg">Your order is waiting at the counter!</div>
-    <button class="popup-btn" onclick="dismissPopup()">✅ Got it! I'm on my way</button>
+    <div class="popup-msg" id="popupMsg">Your order is waiting!</div>
+    <button class="popup-btn" onclick="dismiss()">✅ Got it! I'm on my way</button>
   </div>
 </div>
-<script src="/socket.io/socket.io.js"></script>
 <script>
-const params = new URLSearchParams(window.location.search);
-const orderId = params.get('orderId');
-const orderNumEl = document.getElementById('orderNum');
-const spinnerEl = document.getElementById('spinner');
-const statusEl = document.getElementById('statusText');
-const allowBtn = document.getElementById('allowBtn');
-const overlay = document.getElementById('popupOverlay');
-let audioCtx = null;
-let soundInterval = null;
-let soundEnabled = false;
-let pendingReady = false;
+const params=new URLSearchParams(window.location.search);
+const orderId=params.get('orderId');
+let audioCtx=null,soundLoop=null,soundReady=false,shown=false,pollTimer=null;
 
 function initAudio(){
-  if(!audioCtx) audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+  if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
   return audioCtx.resume();
 }
-
-function playTone(freq, start, dur){
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.connect(gain); gain.connect(audioCtx.destination);
-  osc.frequency.value = freq; osc.type = 'sine';
-  gain.gain.setValueAtTime(0.8, audioCtx.currentTime+start);
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime+start+dur);
-  osc.start(audioCtx.currentTime+start);
-  osc.stop(audioCtx.currentTime+start+dur);
+function playTone(f,t,d){
+  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
+  o.connect(g);g.connect(audioCtx.destination);
+  o.frequency.value=f;o.type='sine';
+  g.gain.setValueAtTime(0.9,audioCtx.currentTime+t);
+  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+t+d);
+  o.start(audioCtx.currentTime+t);o.stop(audioCtx.currentTime+t+d);
 }
-
 function playReady(){
-  if(!audioCtx) return;
+  if(!audioCtx)return;
   audioCtx.resume().then(()=>{
-    [523,659,784,1047].forEach((f,i)=>playTone(f,i*0.2,0.2));
+    [[523,0,.18],[659,.2,.18],[784,.4,.18],[1047,.6,.3],[784,.95,.18],[1047,1.15,.4]].forEach(([f,t,d])=>playTone(f,t,d));
   });
 }
-
 async function enableSound(){
-  allowBtn.disabled = true;
-  allowBtn.textContent = '⏳ Setting up...';
-  try {
-    await initAudio();
-    playTone(880, 0, 0.2);
-    soundEnabled = true;
-  } catch(e){}
-  allowBtn.textContent = '✅ Sound enabled!';
-  allowBtn.classList.add('done');
-  if(pendingReady) showPopup();
+  const btn=document.getElementById('allowBtn');
+  btn.disabled=true;btn.textContent='⏳ Setting up...';
+  try{await initAudio();playTone(880,0,.15);soundReady=true;}catch(e){}
+  btn.textContent='✅ Sound enabled!';
+  btn.classList.add('done');
+  startPolling();
 }
-
 function showPopup(){
-  if(!soundEnabled){ pendingReady = true; return; }
-  pendingReady = false;
-  spinnerEl.style.display = 'none';
-  statusEl.textContent = '🎉 Your order is ready!';
-  statusEl.style.color = '#22c55e';
-  overlay.style.display = "flex"; overlay.style.setProperty("display","flex","important"); alert("🎉 Order Ready! Please come pick up your order.");
-  playReady();
-  if(soundInterval) clearInterval(soundInterval);
-  soundInterval = setInterval(playReady, 4000);
+  if(shown)return;
+  shown=true;
+  document.getElementById('spinner').style.display='none';
+  document.getElementById('statusText').textContent='🎉 Your order is ready!';
+  document.getElementById('statusText').style.color='#22c55e';
+  document.getElementById('popupMsg').textContent='Order #'+orderId+' is waiting at the counter!';
+  const ov=document.getElementById('overlay');
+  ov.style.cssText='display:flex!important;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center';
+  if(soundReady){playReady();if(soundLoop)clearInterval(soundLoop);soundLoop=setInterval(playReady,4000);}
 }
-
-function dismissPopup(){
-  overlay.style.display = 'none';
-  if(soundInterval){ clearInterval(soundInterval); soundInterval = null; }
-  statusEl.textContent = 'Great! Please pick up your order 🙌';
-  statusEl.style.color = '#94a3b8';
+function dismiss(){
+  document.getElementById('overlay').style.display='none';
+  if(soundLoop){clearInterval(soundLoop);soundLoop=null;}
+  if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
+  document.getElementById('statusText').textContent='Great! Please pick up your order 🙌';
+  fetch('/api/orders/acknowledge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId})});
 }
+function checkStatus(){
+  fetch('/api/orders/status?orderId='+orderId)
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.status==='READY')showPopup();
+      else if(data.status==='NOT_FOUND'){
+        if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
+        document.getElementById('spinner').style.display='none';
+        document.getElementById('statusText').textContent='Order not found.';
+      }
+    }).catch(()=>{});
+}
+function startPolling(){checkStatus();if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(checkStatus,3000);}
 
 if(!orderId){
-  orderNumEl.textContent = '?';
-  spinnerEl.style.display = 'none';
-  allowBtn.style.display = 'none';
-  statusEl.textContent = 'No order found.';
-} else {
-  orderNumEl.textContent = '#'+orderId;
-  const socket = io({ transports: ['polling','websocket'] });
-
-  socket.on('connect', ()=>{
-    statusEl.textContent = 'Waiting for your order...';
-    socket.emit('join_order', { orderId });
-  });
-
-  socket.on('order_status', ({status})=>{
-    if(status==='READY') showPopup();
-    else if(status==='NOT_FOUND'){
-      spinnerEl.style.display='none';
-      allowBtn.style.display='none';
-      statusEl.textContent='Order not found.';
-    }
-  });
-
-  socket.on('order_ready', ()=> showPopup());
-
-  socket.on('disconnect', ()=>{
-    // reconnect automatically
-    setTimeout(()=> socket.connect(), 2000);
-  });
+  document.getElementById('orderNum').textContent='?';
+  document.getElementById('spinner').style.display='none';
+  document.getElementById('allowBtn').style.display='none';
+  document.getElementById('statusText').textContent='No order found.';
+}else{
+  document.getElementById('orderNum').textContent='#'+orderId;
 }
-
 document.addEventListener('touchstart',()=>{
-  if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); audioCtx.resume(); }
+  if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext)();audioCtx.resume();}
 },{once:true});
 </script>
 </body>
