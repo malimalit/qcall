@@ -8,109 +8,106 @@
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center}
 .card{background:#1e293b;border-radius:20px;padding:2.5rem 2rem;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:1.2rem}
-.order-number{font-size:4rem;font-weight:800;color:#38bdf8}
-.status-text{font-size:1.4rem;font-weight:600;color:#94a3b8}
+.num{font-size:4rem;font-weight:800;color:#38bdf8}
+.msg{font-size:1.3rem;font-weight:600;color:#94a3b8}
 .spinner{width:50px;height:50px;border:5px solid #334155;border-top-color:#38bdf8;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-.allow-btn{width:100%;padding:1rem;background:#1e40af;color:white;border:none;border-radius:12px;font-size:1.1rem;font-weight:700;cursor:pointer}
-.allow-btn.done{background:#166534;pointer-events:none}
-.popup-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center}
-.popup-box{background:#14532d;border:3px solid #22c55e;border-radius:24px;padding:2.5rem 2rem;width:90%;max-width:360px;display:flex;flex-direction:column;align-items:center;gap:1.2rem;animation:popIn .3s ease}
-@keyframes popIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
-.popup-icon{font-size:4rem}
-.popup-title{font-size:2rem;font-weight:800;color:#22c55e}
-.popup-msg{font-size:1.1rem;color:#bbf7d0;line-height:1.5}
-.popup-btn{width:100%;padding:1.2rem;background:#22c55e;color:#0f172a;border:none;border-radius:14px;font-size:1.2rem;font-weight:800;cursor:pointer}
+.btn{width:100%;padding:1rem;background:#1e40af;color:white;border:none;border-radius:12px;font-size:1.1rem;font-weight:700;cursor:pointer}
+.btn.done{background:#166534;pointer-events:none}
+.overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.9);z-index:9999;align-items:center;justify-content:center}
+.box{background:#14532d;border:3px solid #22c55e;border-radius:24px;padding:2rem;width:88%;max-width:360px;text-align:center}
+.icon{font-size:4rem;margin-bottom:.5rem}
+.title{font-size:2rem;font-weight:800;color:#22c55e;margin-bottom:.5rem}
+.sub{font-size:1rem;color:#bbf7d0;margin-bottom:1.5rem}
+.okbtn{width:100%;padding:1.2rem;background:#22c55e;color:#0f172a;border:none;border-radius:14px;font-size:1.1rem;font-weight:800;cursor:pointer}
 </style>
 </head>
 <body>
 <div class="card">
-  <div class="order-number" id="orderNum">—</div>
-  <div class="spinner" id="spinner"></div>
-  <div class="status-text" id="statusText">Press Allow Sound to start</div>
-  <button class="allow-btn" id="allowBtn" onclick="enableSound()">🔔 Allow Sound & Notifications</button>
+  <div class="num" id="num">—</div>
+  <div class="spinner" id="spin"></div>
+  <div class="msg" id="msg">Tap Allow Sound first</div>
+  <button class="btn" id="btn" onclick="start()">🔔 Allow Sound & Notifications</button>
 </div>
-<div class="popup-overlay" id="overlay">
-  <div class="popup-box">
-    <div class="popup-icon">🎉</div>
-    <div class="popup-title">Order Ready!</div>
-    <div class="popup-msg" id="popupMsg">Your order is waiting!</div>
-    <button class="popup-btn" onclick="dismiss()">✅ Got it! I'm on my way</button>
+<div class="overlay" id="ov">
+  <div class="box">
+    <div class="icon">🎉</div>
+    <div class="title">Order Ready!</div>
+    <div class="sub" id="sub">Your order is waiting at the counter!</div>
+    <button class="okbtn" onclick="done()">✅ Got it! I'm on my way</button>
   </div>
 </div>
 <script>
-const params=new URLSearchParams(window.location.search);
-const orderId=params.get('orderId');
-let audioCtx=null,soundLoop=null,soundReady=false,shown=false,pollTimer=null;
+var orderId = new URLSearchParams(location.search).get('orderId');
+var ctx = null, loop = null, poll = null, active = false;
 
-function initAudio(){
-  if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-  return audioCtx.resume();
-}
-function playTone(f,t,d){
-  const o=audioCtx.createOscillator(),g=audioCtx.createGain();
-  o.connect(g);g.connect(audioCtx.destination);
+document.getElementById('num').textContent = orderId ? '#'+orderId : '?';
+if(!orderId){ document.getElementById('spin').style.display='none'; document.getElementById('btn').style.display='none'; document.getElementById('msg').textContent='No order found.'; }
+
+function tone(f,t,d){
+  var o=ctx.createOscillator(),g=ctx.createGain();
+  o.connect(g);g.connect(ctx.destination);
   o.frequency.value=f;o.type='sine';
-  g.gain.setValueAtTime(0.9,audioCtx.currentTime+t);
-  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+t+d);
-  o.start(audioCtx.currentTime+t);o.stop(audioCtx.currentTime+t+d);
+  g.gain.setValueAtTime(0.9,ctx.currentTime+t);
+  g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+t+d);
+  o.start(ctx.currentTime+t);o.stop(ctx.currentTime+t+d);
 }
-function playReady(){
-  if(!audioCtx)return;
-  audioCtx.resume().then(()=>{
-    [[523,0,.18],[659,.2,.18],[784,.4,.18],[1047,.6,.3],[784,.95,.18],[1047,1.15,.4]].forEach(([f,t,d])=>playTone(f,t,d));
+
+function ring(){
+  if(!ctx)return;
+  ctx.resume().then(function(){
+    [[523,0,.18],[659,.2,.18],[784,.4,.18],[1047,.65,.35],[784,1.05,.18],[1047,1.25,.4]].forEach(function(x){tone(x[0],x[1],x[2]);});
   });
 }
-async function enableSound(){
-  const btn=document.getElementById('allowBtn');
-  btn.disabled=true;btn.textContent='⏳ Setting up...';
-  try{await initAudio();playTone(880,0,.15);soundReady=true;}catch(e){}
+
+function start(){
+  var btn=document.getElementById('btn');
+  btn.disabled=true; btn.textContent='⏳ Setting up...';
+  try{
+    ctx=new(window.AudioContext||window.webkitAudioContext)();
+    ctx.resume().then(function(){ tone(880,0,.15); });
+    active=true;
+  }catch(e){}
   btn.textContent='✅ Sound enabled!';
   btn.classList.add('done');
-  startPolling();
+  document.getElementById('msg').textContent='Waiting for your order...';
+  check();
+  poll=setInterval(check,3000);
 }
-function showPopup(){
-  if(shown)return;
-  shown=true;
-  document.getElementById('spinner').style.display='none';
-  document.getElementById('statusText').textContent='🎉 Your order is ready!';
-  document.getElementById('statusText').style.color='#22c55e';
-  document.getElementById('popupMsg').textContent='Order #'+orderId+' is waiting at the counter!';
-  const ov=document.getElementById('overlay');
-  ov.style.cssText='display:flex!important;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center';
-  if(soundReady){playReady();if(soundLoop)clearInterval(soundLoop);soundLoop=setInterval(playReady,4000);}
-}
-function dismiss(){
-  document.getElementById('overlay').style.display='none';
-  if(soundLoop){clearInterval(soundLoop);soundLoop=null;}
-  if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
-  document.getElementById('statusText').textContent='Great! Please pick up your order 🙌';
-  fetch('/api/orders/acknowledge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId})});
-}
-function checkStatus(){
-  fetch('/api/orders/status?orderId='+orderId)
-    .then(r=>r.json())
-    .then(data=>{
-      if(data.status==='READY')showPopup();
-      else if(data.status==='NOT_FOUND'){
-        if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
-        document.getElementById('spinner').style.display='none';
-        document.getElementById('statusText').textContent='Order not found.';
-      }
-    }).catch(()=>{});
-}
-function startPolling(){checkStatus();if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(checkStatus,3000);}
 
-if(!orderId){
-  document.getElementById('orderNum').textContent='?';
-  document.getElementById('spinner').style.display='none';
-  document.getElementById('allowBtn').style.display='none';
-  document.getElementById('statusText').textContent='No order found.';
-}else{
-  document.getElementById('orderNum').textContent='#'+orderId;
+function check(){
+  if(!orderId)return;
+  fetch('/api/orders/status?orderId='+orderId)
+  .then(function(r){return r.json();})
+  .then(function(d){
+    if(d.status==='READY') show();
+    else if(d.status==='NOT_FOUND'){ clearInterval(poll); document.getElementById('spin').style.display='none'; document.getElementById('msg').textContent='Order not found.'; }
+  })
+  .catch(function(){});
 }
-document.addEventListener('touchstart',()=>{
-  if(!audioCtx){audioCtx=new(window.AudioContext||window.webkitAudioContext)();audioCtx.resume();}
+
+function show(){
+  if(document.getElementById('ov').style.display==='flex')return;
+  clearInterval(poll);
+  document.getElementById('spin').style.display='none';
+  document.getElementById('msg').textContent='🎉 Your order is ready!';
+  document.getElementById('msg').style.color='#22c55e';
+  document.getElementById('sub').textContent='Order #'+orderId+' is waiting at the counter!';
+  var ov=document.getElementById('ov');
+  ov.style.display='flex';
+  if(active){ ring(); loop=setInterval(ring,4000); }
+}
+
+function done(){
+  document.getElementById('ov').style.display='none';
+  clearInterval(loop);
+  document.getElementById('msg').textContent='Great! Please pick up your order 🙌';
+  document.getElementById('msg').style.color='#94a3b8';
+  fetch('/api/orders/acknowledge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId:orderId})});
+}
+
+document.addEventListener('touchstart',function(){
+  if(!ctx){ctx=new(window.AudioContext||window.webkitAudioContext)();ctx.resume();}
 },{once:true});
 </script>
 </body>
