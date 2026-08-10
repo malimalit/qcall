@@ -39,7 +39,7 @@ app.get('/api/vapidPublicKey', (req, res) => {
   res.json({ publicKey: process.env.VAPID_PUBLIC_KEY });
 });
 
-app.post('/api/subscribe', (req, res) => {
+app.post('/api/subscribe', (req,res)=>console.log('SUB HIT',JSON.stringify(req.body)));app.post('/api/subscribe_DISABLED', (req, res) => {
   const { orderId, subscription } = req.body;
   if (orderId && subscription) {
     pushSubscriptions.set(String(orderId), subscription);
