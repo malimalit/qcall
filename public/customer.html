@@ -94,7 +94,7 @@ function showPopup(){
   spinnerEl.style.display = 'none';
   statusEl.textContent = '🎉 Your order is ready!';
   statusEl.style.color = '#22c55e';
-  overlay.style.display = 'flex';
+  overlay.style.display = "flex"; overlay.style.setProperty("display","flex","important"); alert("🎉 Order Ready! Please come pick up your order.");
   playReady();
   if(soundInterval) clearInterval(soundInterval);
   soundInterval = setInterval(playReady, 4000);
