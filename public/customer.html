@@ -1,145 +1,106 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<link rel="manifest" href="/manifest.json"/>
-<meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="apple-mobile-web-app-title" content="QCall"/>
-<title>QCall</title>
-<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
-<script>
-  window.OneSignalDeferred = window.OneSignalDeferred || [];
-  OneSignalDeferred.push(async function(OneSignal) {
-    await OneSignal.init({
-      appId: "d985d84e-28eb-45ca-a1fa-5fa88b02ef10",
-      allowLocalhostAsSecureOrigin: false,
-      notifyButton: { enable: false }
-    });
-  });
-</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QCall - Order Tracking</title>
+<script src="/socket.io/socket.io.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center}
 .card{background:#1e293b;border-radius:20px;padding:2.5rem 2rem;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:1.2rem}
-.num{font-size:4rem;font-weight:800;color:#38bdf8}
-.msg{font-size:1.3rem;font-weight:600;color:#94a3b8}
+.order-number{font-size:4rem;font-weight:800;color:#38bdf8}
+.status{font-size:1.3rem;font-weight:600;color:#94a3b8}
 .spinner{width:50px;height:50px;border:5px solid #334155;border-top-color:#38bdf8;border-radius:50%;animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .btn{width:100%;padding:1rem;background:#1e40af;color:white;border:none;border-radius:12px;font-size:1.1rem;font-weight:700;cursor:pointer}
 .btn.done{background:#166534;pointer-events:none}
-.overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.9);z-index:9999;align-items:center;justify-content:center}
+.overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.9);align-items:center;justify-content:center;z-index:9999}
 .box{background:#14532d;border:3px solid #22c55e;border-radius:24px;padding:2rem;width:88%;max-width:360px;text-align:center}
-.icon{font-size:4rem;margin-bottom:.5rem}
-.title{font-size:2rem;font-weight:800;color:#22c55e;margin-bottom:.5rem}
-.sub{font-size:1rem;color:#bbf7d0;margin-bottom:1.5rem}
+.box h2{font-size:2rem;font-weight:800;color:#22c55e;margin-bottom:.5rem}
+.box p{font-size:1rem;color:#bbf7d0;margin-bottom:1.5rem}
 .okbtn{width:100%;padding:1.2rem;background:#22c55e;color:#0f172a;border:none;border-radius:14px;font-size:1.1rem;font-weight:800;cursor:pointer}
 </style>
 </head>
 <body>
 <div class="card">
-  <div class="num" id="num">—</div>
-  <div class="spinner" id="spin"></div>
-  <div class="msg" id="msg">Tap Allow Sound first</div>
-  <button class="btn" id="btn" onclick="start()">🔔 Allow Sound & Notifications</button>
+  <div class="order-number" id="orderNum">—</div>
+  <div class="spinner" id="spinner"></div>
+  <div class="status" id="status">Connecting...</div>
+  <button class="btn" id="btn" onclick="enableAudio()">🔔 Tap Here to Enable Sound Alerts</button>
 </div>
-<div class="overlay" id="ov">
+<div class="overlay" id="overlay">
   <div class="box">
-    <div class="icon">🎉</div>
-    <div class="title">Order Ready!</div>
-    <div class="sub" id="sub">Your order is waiting!</div>
-    <button class="okbtn" onclick="done()">✅ Got it! I'm on my way</button>
+    <h2>🎉 Order Ready!</h2>
+    <p id="modalMsg">Your order is waiting at the counter!</p>
+    <button class="okbtn" onclick="confirmAndClose()">✅ Got it! I'm on my way</button>
   </div>
 </div>
+<audio id="sound" loop preload="auto" playsinline>
+  <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+</audio>
 <script>
-var orderId=new URLSearchParams(location.search).get('orderId');
-var ctx=null,loop=null,poll=null,active=false;
+var orderId = new URLSearchParams(location.search).get('orderId');
+var sound = document.getElementById('sound');
+var soundEnabled = false;
 
-document.getElementById('num').textContent=orderId?'#'+orderId:'?';
-if(!orderId){
-  document.getElementById('spin').style.display='none';
-  document.getElementById('btn').style.display='none';
-  document.getElementById('msg').textContent='No order found.';
+if(orderId) document.getElementById('orderNum').textContent = '#'+orderId;
+else { document.getElementById('orderNum').textContent='?'; document.getElementById('spinner').style.display='none'; document.getElementById('btn').style.display='none'; document.getElementById('status').textContent='No order found.'; }
+
+function enableAudio(){
+  sound.volume=1.0;
+  sound.play().then(function(){
+    sound.pause();
+    sound.currentTime=0;
+    soundEnabled=true;
+    var btn=document.getElementById('btn');
+    btn.textContent='✅ Sound Alerts Enabled';
+    btn.classList.add('done');
+  }).catch(function(e){ console.log(e); });
 }
 
-function tone(f,t,d){
-  var o=ctx.createOscillator(),g=ctx.createGain();
-  o.connect(g);g.connect(ctx.destination);
-  o.frequency.value=f;o.type='sine';
-  g.gain.setValueAtTime(0.9,ctx.currentTime+t);
-  g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+t+d);
-  o.start(ctx.currentTime+t);o.stop(ctx.currentTime+t+d);
+function triggerAlert(message){
+  if(soundEnabled){
+    sound.currentTime=0;
+    sound.volume=1.0;
+    sound.play().catch(function(e){ console.log(e); });
+  }
+  document.getElementById('modalMsg').textContent = message;
+  document.getElementById('overlay').style.display='flex';
+  document.getElementById('spinner').style.display='none';
+  document.getElementById('status').textContent='🎉 Your order is ready!';
+  document.getElementById('status').style.color='#22c55e';
 }
 
-function ring(){
-  if(!ctx)return;
-  ctx.resume().then(function(){
-    [[523,0,.18],[659,.2,.18],[784,.4,.18],[1047,.65,.35],[784,1.05,.18],[1047,1.25,.4]].forEach(function(x){tone(x[0],x[1],x[2]);});
-  });
+function confirmAndClose(){
+  sound.pause();
+  sound.currentTime=0;
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('status').textContent='Great! Please pick up your order 🙌';
+  document.getElementById('status').style.color='#94a3b8';
+  if(orderId) socket.emit('order_acknowledged',{orderId:String(orderId)});
 }
 
-async function start(){
-  var btn=document.getElementById('btn');
-  btn.disabled=true;btn.textContent='⏳ Setting up...';
-  try{
-    ctx=new(window.AudioContext||window.webkitAudioContext)();
-    await ctx.resume();
-    tone(880,0,.15);
-    active=true;
-  }catch(e){}
+var socket = io({ transports:['polling','websocket'] });
 
-  // OneSignal permission + tag with orderId
-  try{
-    OneSignalDeferred.push(async function(OneSignal){
-      await OneSignal.Notifications.requestPermission();
-      await OneSignal.User.addTag('orderId', String(orderId));
-    });
-  }catch(e){ console.log('OneSignal error',e); }
+socket.on('connect',function(){
+  if(orderId){
+    socket.emit('join_order',{orderId:String(orderId)});
+    document.getElementById('status').textContent='Tracking Order #'+orderId;
+  }
+});
 
-  btn.textContent='✅ Sound enabled!';
-  btn.classList.add('done');
-  document.getElementById('msg').textContent='Waiting for your order...';
-  check();
-  poll=setInterval(check,3000);
-}
+socket.on('order_ready',function(data){
+  triggerAlert(data.message || 'Your order is ready at the counter!');
+});
 
-function check(){
-  if(!orderId)return;
-  fetch('/api/orders/status?orderId='+orderId)
-  .then(function(r){return r.json();})
-  .then(function(d){
-    if(d.status==='READY') show();
-    else if(d.status==='NOT_FOUND'){
-      clearInterval(poll);
-      document.getElementById('spin').style.display='none';
-      document.getElementById('msg').textContent='Order not found.';
-    }
-  }).catch(function(){});
-}
+socket.on('order_status',function(data){
+  if(data.status==='READY') triggerAlert('Your order is ready at the counter!');
+});
 
-function show(){
-  if(document.getElementById('ov').style.display==='flex')return;
-  clearInterval(poll);
-  document.getElementById('spin').style.display='none';
-  document.getElementById('msg').textContent='🎉 Your order is ready!';
-  document.getElementById('msg').style.color='#22c55e';
-  document.getElementById('sub').textContent='Order #'+orderId+' is waiting at the counter!';
-  var ov=document.getElementById('ov');
-  ov.style.display='flex';
-  if(active){ring();if(loop)clearInterval(loop);loop=setInterval(ring,4000);}
-}
-
-function done(){
-  document.getElementById('ov').style.display='none';
-  clearInterval(loop);
-  document.getElementById('msg').textContent='Great! Please pick up your order 🙌';
-  document.getElementById('msg').style.color='#94a3b8';
-  fetch('/api/orders/acknowledge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({orderId:orderId})});
-}
-
-document.addEventListener('touchstart',function(){
-  if(!ctx){ctx=new(window.AudioContext||window.webkitAudioContext)();ctx.resume();}
-},{once:true});
+socket.on('disconnect',function(){
+  setTimeout(function(){ socket.connect(); },2000);
+});
 </script>
 </body>
 </html>
