@@ -45,7 +45,12 @@ var sound = document.getElementById('sound');
 var soundEnabled = false;
 
 if(orderId) document.getElementById('orderNum').textContent = '#'+orderId;
-else { document.getElementById('orderNum').textContent='?'; document.getElementById('spinner').style.display='none'; document.getElementById('btn').style.display='none'; document.getElementById('status').textContent='No order found.'; }
+else {
+  document.getElementById('orderNum').textContent='?';
+  document.getElementById('spinner').style.display='none';
+  document.getElementById('btn').style.display='none';
+  document.getElementById('status').textContent='No order found.';
+}
 
 function enableAudio(){
   sound.volume=1.0;
@@ -79,6 +84,8 @@ function confirmAndClose(){
   document.getElementById('status').textContent='Great! Please pick up your order 🙌';
   document.getElementById('status').style.color='#94a3b8';
   if(orderId) socket.emit('order_acknowledged',{orderId:String(orderId)});
+  // اقفل الصفحة بعد ثانيتين
+  setTimeout(function(){ window.close(); }, 2000);
 }
 
 var socket = io({ transports:['polling','websocket'] });
