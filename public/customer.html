@@ -84,8 +84,8 @@ function confirmAndClose(){
   document.getElementById('status').textContent='Great! Please pick up your order 🙌';
   document.getElementById('status').style.color='#94a3b8';
   if(orderId) socket.emit('order_acknowledged',{orderId:String(orderId)});
-  // اقفل الصفحة بعد ثانيتين
-  setTimeout(function(){ window.close(); }, 2000);
+  // لا نقفل الصفحة
+  
 }
 
 var socket = io({ transports:['polling','websocket'] });
