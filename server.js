@@ -125,3 +125,21 @@ app.post('/api/orders/acknowledge', (req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => console.log('🚀 QCall Server running on port ' + PORT));
+
+// WhatsApp notification via UltraMsg
+async function sendWhatsApp(phone, message) {
+  try {
+    const axios = require('axios');
+    const instance = activeOrders._ultramsgInstance || process.env.ULTRAMSG_INSTANCE;
+    const token = activeOrders._ultramsgToken || process.env.ULTRAMSG_TOKEN;
+    if (!instance || !token || !phone) return;
+    await axios.post(`https://api.ultramsg.com/${instance}/messages/chat`, {
+      token,
+      to: phone,
+      body: message
+    });
+    console.log('WhatsApp sent to', phone);
+  } catch(e) {
+    console.log('WhatsApp error:', e.message);
+  }
+}
