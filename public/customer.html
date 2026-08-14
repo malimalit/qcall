@@ -97,8 +97,8 @@ document.addEventListener('visibilitychange', function(){
     fetch('/api/orders/status?orderId='+orderId)
     .then(function(r){ return r.json(); })
     .then(function(d){
-      if(d.status==='READY' && document.getElementById('overlay').style.display !== 'flex'){
-        triggerAlert('Your order is ready at the counter!');
+      if(d.status==='READY'){
+        location.reload();
       }
     }).catch(function(){});
   }
