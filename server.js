@@ -64,21 +64,9 @@ app.post('/api/orders/call', async (req,res) => {
 
   console.log(`Calling order ${orderId}, room: order_${orderId}`);
   io.to(`order_${orderId}`).emit('order_ready', { orderId, message:`Order #${orderId} is ready!` });
-
-  const subscription = pushSubscriptions.get(String(orderId));
-  if (subscription) {
-    try {
-      await webpush.sendNotification(subscription, JSON.stringify({ title:'🎉 Your order is ready!', body:`Order #${orderId} is waiting at the counter!`, orderId }));
-    } catch(e) { console.log('Push failed:', e.message); }
-  }
-
   if (reminderIntervals.has(String(orderId))) clearInterval(reminderIntervals.get(String(orderId)));
   const timer = setInterval(async () => {
     io.to(`order_${orderId}`).emit('order_ready', { orderId, message:`Reminder: Order #${orderId} is still waiting!` });
-    const sub = pushSubscriptions.get(String(orderId));
-    if (sub) {
-      try { await webpush.sendNotification(sub, JSON.stringify({ title:'⏰ Reminder', body:`Order #${orderId} is still waiting!`, orderId })); } catch(e) {}
-    }
   }, 3*60*1000);
   reminderIntervals.set(String(orderId), timer);
 
@@ -132,8 +120,8 @@ server.listen(PORT, '0.0.0.0', () => console.log('🚀 QCall Server running on p
 async function sendWhatsApp(phone, message) {
   try {
     const axios = require('axios');
-    const instance = activeOrders._ultramsgInstance || process.env.ULTRAMSG_INSTANCE;
-    const token = activeOrders._ultramsgToken || process.env.ULTRAMSG_TOKEN;
+    const instance = restaurantConfig.instance || process.env.ULTRAMSG_INSTANCE;
+    const token = restaurantConfig.token || process.env.ULTRAMSG_TOKEN;
     if (!instance || !token || !phone) return;
     await axios.post(`https://api.ultramsg.com/${instance}/messages/chat`, {
       token,
