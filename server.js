@@ -157,3 +157,14 @@ app.post('/api/setup', (req, res) => {
   console.log('Setup updated:', restaurantConfig.phone);
   res.json({ success: true });
 });
+
+// Save customer phone
+app.post('/api/orders/phone', (req, res) => {
+  const { orderId, phone } = req.body;
+  const order = activeOrders.get(String(orderId));
+  if(order && phone) {
+    order.customerPhone = phone;
+    activeOrders.set(String(orderId), order);
+  }
+  res.json({ success: true });
+});
