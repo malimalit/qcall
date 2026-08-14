@@ -167,7 +167,10 @@ app.post('/api/orders/phone', (req, res) => {
   const { orderId, phone } = req.body;
   const order = activeOrders.get(String(orderId));
   if(order && phone) {
-    order.customerPhone = phone;
+    let formattedPhone = phone.replace(/\D/g, '');
+    if(formattedPhone.startsWith('0')) formattedPhone = '20' + formattedPhone.slice(1);
+    if(!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
+    order.customerPhone = formattedPhone;
     activeOrders.set(String(orderId), order);
   }
   res.json({ success: true });
