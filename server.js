@@ -143,3 +143,17 @@ async function sendWhatsApp(phone, message) {
     console.log('WhatsApp error:', e.message);
   }
 }
+
+// Setup storage
+let restaurantConfig = { instance: process.env.ULTRAMSG_INSTANCE, token: process.env.ULTRAMSG_TOKEN, phone: '' };
+
+app.get(['/setup', '/setup.html'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'setup.html')));
+
+app.post('/api/setup', (req, res) => {
+  const { instance, token, phone } = req.body;
+  if(instance) restaurantConfig.instance = instance;
+  if(token) restaurantConfig.token = token;
+  if(phone) restaurantConfig.phone = phone;
+  console.log('Setup updated:', restaurantConfig.phone);
+  res.json({ success: true });
+});

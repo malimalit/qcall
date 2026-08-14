@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QCall - Setup</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+.card{background:#1e293b;border-radius:20px;padding:2.5rem 2rem;width:100%;max-width:420px}
+h1{font-size:1.8rem;font-weight:800;color:#38bdf8;margin-bottom:.5rem}
+p{color:#94a3b8;margin-bottom:2rem;font-size:.95rem}
+label{display:block;font-size:.9rem;color:#94a3b8;margin-bottom:.5rem}
+input{width:100%;padding:.9rem 1rem;background:#0f172a;border:1px solid #334155;border-radius:10px;color:#f1f5f9;font-size:1rem;margin-bottom:1.2rem}
+input:focus{outline:none;border-color:#38bdf8}
+.btn{width:100%;padding:1rem;background:#1e40af;color:white;border:none;border-radius:12px;font-size:1.1rem;font-weight:700;cursor:pointer}
+.btn:hover{background:#1d4ed8}
+.success{display:none;background:#14532d;border:1px solid #22c55e;border-radius:10px;padding:1rem;color:#22c55e;text-align:center;margin-top:1rem}
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>⚙️ QCall Setup</h1>
+  <p>Enter your restaurant's WhatsApp details to enable customer notifications.</p>
+  <label>UltraMsg Instance ID</label>
+  <input type="text" id="instance" placeholder="e.g. instance188449"/>
+  <label>UltraMsg Token</label>
+  <input type="text" id="token" placeholder="e.g. 6ocaa7cx7sq050ht"/>
+  <label>Restaurant WhatsApp Number (with country code)</label>
+  <input type="text" id="phone" placeholder="e.g. +201001234567"/>
+  <button class="btn" onclick="saveSetup()">💾 Save Settings</button>
+  <div class="success" id="success">✅ Settings saved successfully!</div>
+</div>
+<script>
+// Load saved settings
+var inst = localStorage.getItem('ultramsg_instance') || '';
+var tok = localStorage.getItem('ultramsg_token') || '';
+var ph = localStorage.getItem('restaurant_phone') || '';
+document.getElementById('instance').value = inst;
+document.getElementById('token').value = tok;
+document.getElementById('phone').value = ph;
+
+function saveSetup(){
+  var instance = document.getElementById('instance').value.trim();
+  var token = document.getElementById('token').value.trim();
+  var phone = document.getElementById('phone').value.trim();
+  if(!instance || !token || !phone){ alert('Please fill all fields'); return; }
+  localStorage.setItem('ultramsg_instance', instance);
+  localStorage.setItem('ultramsg_token', token);
+  localStorage.setItem('restaurant_phone', phone);
+  fetch('/api/setup', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({instance, token, phone})
+  }).then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.success) document.getElementById('success').style.display='block';
+  });
+}
+</script>
+</body>
+</html>
