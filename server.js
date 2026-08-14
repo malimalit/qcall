@@ -4,14 +4,12 @@ const http = require('http');
 const path = require('path');
 const QRCode = require('qrcode');
 const { Server } = require('socket.io');
-const webpush = require('web-push');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, { transports: ["polling", "websocket"], cors: { origin: "*" } });
 const PORT = process.env.PORT || 3000;
 
-webpush.setVapidDetails('mailto:admin@qcall.app', process.env.VAPID_PUBLIC_KEY, process.env.VAPID_PRIVATE_KEY);
 
 const activeOrders = new Map();
 const reminderIntervals = new Map();
