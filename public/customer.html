@@ -92,17 +92,15 @@ function confirmAndClose(){
 }
 
 // لما الصفحة ترجع للـ foreground تشيك على الـ order تلقائي
-document.addEventListener('visibilitychange', function(){
-  if(document.visibilityState === 'visible' && orderId){
-    fetch('/api/orders/status?orderId='+orderId)
-    .then(function(r){ return r.json(); })
-    .then(function(d){
-      if(d.status==='READY'){
-        location.reload();
-      }
-    }).catch(function(){});
-  }
-});
+// Poll every 3 seconds regardless of visibility
+setInterval(function(){
+  if(!orderId || orderReady) return;
+  fetch('/api/orders/status?orderId='+orderId)
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.status==='READY') triggerAlert('Your order is ready at the counter!');
+  }).catch(function(){});
+}, 3000);
 
 var socket = io({ transports:['polling','websocket'] });
 
