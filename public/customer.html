@@ -43,6 +43,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;b
 var orderId = new URLSearchParams(location.search).get('orderId');
 var sound = document.getElementById('sound');
 var soundEnabled = false;
+var orderReady = false;
 
 if(orderId) document.getElementById('orderNum').textContent = '#'+orderId;
 else {
@@ -61,32 +62,47 @@ function enableAudio(){
     var btn=document.getElementById('btn');
     btn.textContent='✅ Sound Alerts Enabled';
     btn.classList.add('done');
+    // لو الorder كان جاهز قبل ما يضغط Enable
+    if(orderReady) triggerAlert('Your order is ready at the counter!');
   }).catch(function(e){ console.log(e); });
 }
 
 function triggerAlert(message){
-  if(soundEnabled){
-    sound.currentTime=0;
-    sound.volume=1.0;
-    sound.play().catch(function(e){ console.log(e); });
-  }
+  orderReady=true;
   document.getElementById('modalMsg').textContent = message;
   document.getElementById('overlay').style.display='flex';
   document.getElementById('spinner').style.display='none';
   document.getElementById('status').textContent='🎉 Your order is ready!';
   document.getElementById('status').style.color='#22c55e';
+  if(soundEnabled){
+    sound.currentTime=0;
+    sound.volume=1.0;
+    sound.play().catch(function(e){ console.log(e); });
+  }
 }
 
 function confirmAndClose(){
   sound.pause();
   sound.currentTime=0;
+  orderReady=false;
   document.getElementById('overlay').style.display='none';
   document.getElementById('status').textContent='Great! Please pick up your order 🙌';
   document.getElementById('status').style.color='#94a3b8';
   if(orderId) socket.emit('order_acknowledged',{orderId:String(orderId)});
-  // لا نقفل الصفحة
-  
 }
+
+// لما الصفحة ترجع للـ foreground تشيك على الـ order تلقائي
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible' && orderId){
+    fetch('/api/orders/status?orderId='+orderId)
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d.status==='READY' && document.getElementById('overlay').style.display !== 'flex'){
+        triggerAlert('Your order is ready at the counter!');
+      }
+    }).catch(function(){});
+  }
+});
 
 var socket = io({ transports:['polling','websocket'] });
 
