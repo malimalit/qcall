@@ -40,21 +40,35 @@ document.getElementById('instance').value = inst;
 document.getElementById('token').value = tok;
 document.getElementById('phone').value = ph;
 
-function saveSetup(){
+// Auto-detect country code from IP
+async function getCountryCode(){
+  try{
+    var r = await fetch('https://ipapi.co/json/');
+    var d = await r.json();
+    return d.country_calling_code ? d.country_calling_code.replace('+','') : '20';
+  }catch(e){ return '20'; }
+}
+
+async function saveSetup(){
   var instance = document.getElementById('instance').value.trim();
   var token = document.getElementById('token').value.trim();
   var phone = document.getElementById('phone').value.trim();
   if(!instance || !token || !phone){ alert('Please fill all fields'); return; }
+  var countryCode = await getCountryCode();
   localStorage.setItem('ultramsg_instance', instance);
   localStorage.setItem('ultramsg_token', token);
   localStorage.setItem('restaurant_phone', phone);
+  localStorage.setItem('country_code', countryCode);
   fetch('/api/setup', {
     method: 'POST',
     headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({instance, token, phone})
+    body: JSON.stringify({instance, token, phone, countryCode})
   }).then(function(r){ return r.json(); })
   .then(function(d){
-    if(d.success) document.getElementById('success').style.display='block';
+    if(d.success){
+      document.getElementById('success').style.display='block';
+      document.getElementById('success').textContent='✅ Settings saved! Country code: +' + countryCode;
+    }
   });
 }
 </script>

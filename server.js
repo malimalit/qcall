@@ -149,15 +149,16 @@ async function sendWhatsApp(phone, message) {
 }
 
 // Setup storage
-let restaurantConfig = { instance: process.env.ULTRAMSG_INSTANCE, token: process.env.ULTRAMSG_TOKEN, phone: '' };
+let restaurantConfig = { instance: process.env.ULTRAMSG_INSTANCE, token: process.env.ULTRAMSG_TOKEN, phone: '', countryCode: '20' };
 
 app.get(['/setup', '/setup.html'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'setup.html')));
 
 app.post('/api/setup', (req, res) => {
-  const { instance, token, phone } = req.body;
+  const { instance, token, phone, countryCode } = req.body;
   if(instance) restaurantConfig.instance = instance;
   if(token) restaurantConfig.token = token;
   if(phone) restaurantConfig.phone = phone;
+  if(countryCode) restaurantConfig.countryCode = countryCode;
   console.log('Setup updated:', restaurantConfig.phone);
   res.json({ success: true });
 });
@@ -168,7 +169,8 @@ app.post('/api/orders/phone', (req, res) => {
   const order = activeOrders.get(String(orderId));
   if(order && phone) {
     let formattedPhone = phone.replace(/\D/g, '');
-    if(formattedPhone.startsWith('0')) formattedPhone = '20' + formattedPhone.slice(1);
+    const cc = restaurantConfig.countryCode || '20';
+    if(formattedPhone.startsWith('0')) formattedPhone = cc + formattedPhone.slice(1);
     if(!formattedPhone.startsWith('+')) formattedPhone = '+' + formattedPhone;
     order.customerPhone = formattedPhone;
     activeOrders.set(String(orderId), order);
