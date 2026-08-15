@@ -24,7 +24,11 @@ tr:last-child td{border-bottom:none}
 </style>
 </head>
 <body>
-<h1>📋 Orders Archive</h1>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+  <a href="/cashier.html" style="background:#1e40af;color:white;padding:.7rem 1.5rem;border-radius:10px;text-decoration:none;font-weight:700">← Cashier</a>
+  <h1 style="margin:0">📋 Orders Archive</h1>
+  <div style="width:100px"></div>
+</div>
 <div class="stats">
   <div class="stat">
     <div class="stat-number" id="totalCount">0</div>
@@ -53,7 +57,7 @@ tr:last-child td{border-bottom:none}
 function loadArchive(){
   var orders = JSON.parse(localStorage.getItem('qcall_archive') || '[]');
   document.getElementById('totalCount').textContent = orders.length;
-  document.getElementById('completedCount').textContent = orders.filter(function(o){ return o.status==='READY'; }).length;
+  document.getElementById('completedCount').textContent = orders.length;
   var tbody = document.getElementById('archiveBody');
   if(orders.length === 0){
     tbody.innerHTML = '<tr><td colspan="4" class="empty">No archived orders yet.</td></tr>';
