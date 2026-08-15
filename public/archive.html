@@ -1,69 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>QCall - Archive</title>
-  <style>
-    *{margin:0;padding:0;box-sizing:border-box}
-    body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;padding:1.5rem}
-    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem}
-    header h1{font-size:1.8rem;color:#38bdf8}
-    .back-btn{padding:.6rem 1.2rem;background:#1e293b;color:#94a3b8;border:none;border-radius:10px;font-size:.9rem;cursor:pointer;text-decoration:none}
-    .clear-btn{padding:.6rem 1.2rem;background:#ef4444;color:white;border:none;border-radius:10px;font-size:.9rem;cursor:pointer}
-    table{width:100%;border-collapse:collapse;background:#1e293b;border-radius:14px;overflow:hidden}
-    th{background:#0f172a;padding:1rem;text-align:left;color:#64748b;font-size:.85rem}
-    td{padding:1rem;border-top:1px solid #0f172a;font-size:.95rem}
-    .empty{text-align:center;color:#475569;padding:3rem;font-size:1.1rem}
-    .order-num{color:#38bdf8;font-weight:700}
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QCall - Archive</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;padding:2rem}
+h1{font-size:1.8rem;font-weight:800;color:#38bdf8;margin-bottom:1.5rem;text-align:center}
+.stats{display:flex;gap:1rem;justify-content:center;margin-bottom:2rem;flex-wrap:wrap}
+.stat{background:#1e293b;border-radius:12px;padding:1rem 2rem;text-align:center}
+.stat-number{font-size:2rem;font-weight:800;color:#22c55e}
+.stat-label{font-size:.85rem;color:#94a3b8}
+table{width:100%;border-collapse:collapse;background:#1e293b;border-radius:12px;overflow:hidden}
+th{background:#0f172a;padding:1rem;text-align:left;font-size:.85rem;color:#94a3b8;text-transform:uppercase}
+td{padding:1rem;border-bottom:1px solid #334155;font-size:.95rem}
+tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:700}
+.badge.ready{background:#14532d;color:#22c55e}
+.badge.preparing{background:#1e3a5f;color:#38bdf8}
+.clear-btn{display:block;margin:1.5rem auto 0;padding:.8rem 2rem;background:#7f1d1d;color:white;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer}
+.empty{text-align:center;padding:3rem;color:#94a3b8}
+</style>
 </head>
 <body>
-<header>
-  <h1>📁 Archive</h1>
-  <div style="display:flex;gap:.8rem">
-    <a href="/cashier.html" class="back-btn">← Back to Cashier</a>
-    <button class="clear-btn" onclick="clearArchive()">Clear All</button>
+<h1>📋 Orders Archive</h1>
+<div class="stats">
+  <div class="stat">
+    <div class="stat-number" id="totalCount">0</div>
+    <div class="stat-label">Total Orders</div>
   </div>
-</header>
-<div id="content"></div>
+  <div class="stat">
+    <div class="stat-number" id="completedCount">0</div>
+    <div class="stat-label">Completed</div>
+  </div>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th>Order #</th>
+      <th>Time</th>
+      <th>Status</th>
+      <th>Phone</th>
+    </tr>
+  </thead>
+  <tbody id="archiveBody">
+    <tr><td colspan="4" class="empty">No archived orders yet.</td></tr>
+  </tbody>
+</table>
+<button class="clear-btn" onclick="clearArchive()">🗑️ Clear Archive</button>
 <script>
-  function loadArchive() {
-    const archive = JSON.parse(localStorage.getItem('qcall_archive') || '[]');
-    const content = document.getElementById('content');
-    if (!archive.length) {
-      content.innerHTML = '<p class="empty">No archived orders yet.</p>';
-      return;
-    }
-    content.innerHTML = `
-      <table>
-        <thead>
-          <tr>
-            <th>Order #</th>
-            <th>Created</th>
-            <th>Completed</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${archive.reverse().map(o => `
-            <tr>
-              <td class="order-num">#${o.orderId}</td>
-              <td>${o.createdAt}</td>
-              <td>${o.completedAt}</td>
-            </tr>
-          `).join('')}
-        </tbody>
-      </table>`;
+function loadArchive(){
+  var orders = JSON.parse(localStorage.getItem('qcall_archive') || '[]');
+  document.getElementById('totalCount').textContent = orders.length;
+  document.getElementById('completedCount').textContent = orders.filter(function(o){ return o.status==='READY'; }).length;
+  var tbody = document.getElementById('archiveBody');
+  if(orders.length === 0){
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">No archived orders yet.</td></tr>';
+    return;
   }
+  tbody.innerHTML = orders.reverse().map(function(o){
+    return '<tr>'+
+      '<td><strong>#'+o.orderId+'</strong></td>'+
+      '<td>'+o.completedAt+'</td>'+
+      '<td><span class="badge ready">✅ Completed</span></td>'+
+      '<td>'+(o.customerPhone || '—')+'</td>'+
+    '</tr>';
+  }).join('');
+}
 
-  function clearArchive() {
-    if (confirm('Clear all archived orders?')) {
-      localStorage.removeItem('qcall_archive');
-      loadArchive();
-    }
+function clearArchive(){
+  if(confirm('Clear all archived orders?')){
+    localStorage.removeItem('qcall_archive');
+    loadArchive();
   }
+}
 
-  loadArchive();
+loadArchive();
 </script>
 </body>
 </html>
