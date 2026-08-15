@@ -85,7 +85,13 @@
   const socket = io();
   let currentOrder = null;
 
-  socket.on('orders_updated', (orders) => renderOrders(orders));
+  socket.on('order_archived', function(data){
+  var archive = JSON.parse(localStorage.getItem('qcall_archive') || '[]');
+  archive.push(data);
+  localStorage.setItem('qcall_archive', JSON.stringify(archive));
+});
+
+socket.on('orders_updated', (orders) => renderOrders(orders));
 
   async function createOrder() {
     const res = await fetch('/api/orders/create', { method: 'POST' });
