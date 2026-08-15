@@ -151,6 +151,12 @@ async function sendWhatsApp(phone, message) {
 let restaurantConfig = { instance: process.env.ULTRAMSG_INSTANCE, token: process.env.ULTRAMSG_TOKEN, phone: '', countryCode: process.env.COUNTRY_CODE || '20' };
 console.log('Config loaded:', restaurantConfig.instance, restaurantConfig.token ? 'token-ok' : 'no-token');
 
+app.post('/api/auth', (req, res) => {
+  const { password } = req.body;
+  const correct = process.env.SETUP_PASSWORD || 'Malit@1972';
+  res.json({ success: password === correct });
+});
+
 app.get(['/setup', '/setup.html'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'setup.html')));
 
 app.post('/api/setup', (req, res) => {

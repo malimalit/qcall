@@ -19,6 +19,14 @@ input:focus{outline:none;border-color:#38bdf8}
 </style>
 </head>
 <body>
+<div id="authScreen" style="position:fixed;top:0;left:0;width:100%;height:100%;background:#0f172a;display:flex;align-items:center;justify-content:center;z-index:9999">
+  <div style="background:#1e293b;border-radius:20px;padding:2.5rem;width:90%;max-width:380px;text-align:center">
+    <h2 style="color:#38bdf8;margin-bottom:1.5rem">🔒 Admin Access</h2>
+    <input type="password" id="pwdInput" placeholder="Enter password" style="width:100%;padding:.9rem;background:#0f172a;border:1px solid #334155;border-radius:10px;color:#f1f5f9;font-size:1rem;margin-bottom:1rem;text-align:center"/>
+    <button onclick="checkPassword()" style="width:100%;padding:1rem;background:#1e40af;color:white;border:none;border-radius:12px;font-size:1rem;font-weight:700;cursor:pointer">Login</button>
+    <p id="pwdError" style="color:#ef4444;margin-top:.8rem;display:none">Wrong password!</p>
+  </div>
+</div>
 <div class="card">
   <h1>⚙️ QCall Setup</h1>
   <p>Enter your restaurant's WhatsApp details to enable customer notifications.</p>
@@ -32,6 +40,25 @@ input:focus{outline:none;border-color:#38bdf8}
   <div class="success" id="success">✅ Settings saved successfully!</div>
 </div>
 <script>
+function checkPassword(){
+  var pwd = document.getElementById('pwdInput').value;
+  fetch('/api/auth', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({password:pwd})
+  }).then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.success){
+      document.getElementById('authScreen').style.display='none';
+    } else {
+      document.getElementById('pwdError').style.display='block';
+    }
+  });
+}
+document.getElementById('pwdInput').addEventListener('keypress', function(e){
+  if(e.key==='Enter') checkPassword();
+});
+
 // Load saved settings
 var inst = localStorage.getItem('ultramsg_instance') || '';
 var tok = localStorage.getItem('ultramsg_token') || '';
