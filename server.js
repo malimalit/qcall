@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 3000;
 const activeOrders = new Map();
 const reminderIntervals = new Map();
 const pushSubscriptions = new Map();
-let orderCounter = 100;
+let orderCounter = parseInt(process.env.ORDER_COUNTER || '100');
 
 app.use(express.static(path.join(__dirname, 'public')));
 app.use(express.json());
@@ -35,6 +35,7 @@ app.post('/api/subscribe', (req,res) => {
 
 app.post('/api/orders/create', async (req,res) => {
   orderCounter++;
+  process.env.ORDER_COUNTER = String(orderCounter);
   const orderId = String(orderCounter);
   const protocol = req.headers['x-forwarded-proto'] || req.protocol;
   const host = req.headers['x-forwarded-host'] || req.get('host');
