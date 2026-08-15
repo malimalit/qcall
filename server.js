@@ -99,7 +99,20 @@ io.on('connection', (socket) => {
       socket.emit('order_ready', { orderId, message:`Order #${orderId} is ready!` });
     }
   });
-  socket.on('order_acknowledged', ({ orderId }) => { if (orderId) removeOrder(String(orderId)); });
+  socket.on('order_acknowledged', ({ orderId, customerPhone }) => {
+    if (orderId) {
+      const order = activeOrders.get(String(orderId));
+      if(order) {
+        // Emit to cashier to archive
+        io.emit('order_archived', {
+          orderId: order.orderId,
+          completedAt: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+          customerPhone: order.customerPhone || ''
+        });
+      }
+      removeOrder(String(orderId));
+    }
+  });
   socket.on('disconnect', () => console.log('Socket disconnected:', socket.id));
 });
 
