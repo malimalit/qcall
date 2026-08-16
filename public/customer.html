@@ -98,11 +98,11 @@ function triggerAlert(message){
 function confirmAndClose(){
   sound.pause();
   sound.currentTime=0;
+  sound.src='';
   orderReady=false;
   document.getElementById('overlay').style.display='none';
-  document.getElementById('status').textContent='Great! Please pick up your order 🙌';
-  document.getElementById('status').style.color='#94a3b8';
   if(orderId) socket.emit('order_acknowledged',{orderId:String(orderId)});
+  document.querySelector('.card').innerHTML='<div style="text-align:center;padding:2rem"><div style="font-size:4rem">🙌</div><h2 style="color:#22c55e;font-size:2rem;margin:1rem 0">Thank You!</h2><p style="color:#94a3b8;font-size:1.1rem">Your order is ready at the counter.<br>Please come pick it up!</p></div>';
 }
 
 var socket = io({ transports:['polling','websocket'] });
