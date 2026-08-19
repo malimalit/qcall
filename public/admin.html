@@ -6,105 +6,125 @@
 <title>QCall Admin</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-body{font-family:-apple-system,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;padding:2rem}
-h1{color:#38bdf8;text-align:center;margin-bottom:2rem}
-.card{background:#1e293b;border-radius:16px;padding:1.5rem;margin-bottom:1.5rem;max-width:800px;margin-left:auto;margin-right:auto}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;max-width:800px;margin:0 auto 1.5rem}
-.stat{background:#1e293b;border-radius:12px;padding:1.2rem;text-align:center}
-.stat h2{font-size:2rem;color:#38bdf8}
-.stat p{color:#94a3b8;font-size:.85rem}
+body{font-family:-apple-system,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem}
+.box{background:#1e293b;border-radius:16px;padding:2rem;width:100%;max-width:800px}
 input,select{width:100%;padding:.8rem;background:#0f172a;border:1px solid #334155;border-radius:8px;color:#f1f5f9;font-size:.95rem;margin-bottom:.8rem}
-.btn{padding:.8rem 1.5rem;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.9rem}
-.btn-blue{background:#1e40af;color:white;width:100%}
-.btn-green{background:#166534;color:white}
-.btn-red{background:#991b1b;color:white}
-.btn-orange{background:#92400e;color:white}
+.btn{padding:.8rem 1.2rem;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:.9rem;color:white}
+.b1{background:#1e40af;width:100%}
+.b2{background:#166534}
+.b3{background:#991b1b}
+.b4{background:#92400e}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:1.5rem}
+.stat{background:#0f172a;border-radius:10px;padding:1rem;text-align:center}
+.stat h2{font-size:2rem;color:#38bdf8}
+.stat p{color:#94a3b8;font-size:.8rem}
 .row{background:#0f172a;border-radius:10px;padding:1rem;margin-bottom:.8rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.5rem}
-.badge{padding:.2rem .6rem;border-radius:20px;font-size:.75rem;font-weight:700}
+.badge{padding:.2rem .6rem;border-radius:20px;font-size:.75rem;font-weight:700;display:inline-block}
 .active{background:#14532d;color:#22c55e}
 .expired{background:#450a0a;color:#ef4444}
-.login{max-width:350px;margin:15vh auto}
+h2{color:#38bdf8;margin-bottom:1.2rem}
+h3{color:#38bdf8;margin-bottom:1rem;margin-top:1.5rem}
 </style>
 </head>
 <body>
-<div id="loginDiv" class="login">
-  <div class="card">
-    <h2 style="color:#38bdf8;text-align:center;margin-bottom:1.2rem">QCall Admin</h2>
-    <input type="password" id="pass" placeholder="Password" onkeydown="if(event.key==='Enter')login()"/>
-    <button class="btn btn-blue" onclick="login()">Login</button>
-  </div>
+<div class="box" id="loginBox">
+  <h2 style="text-align:center">QCall Admin</h2>
+  <input type="password" id="pass" placeholder="Password" />
+  <button class="btn b1" id="loginBtn">Login</button>
+  <p id="err" style="color:#ef4444;text-align:center;margin-top:.5rem"></p>
 </div>
-<div id="mainDiv" style="display:none">
-  <h1>QCall Admin Dashboard</h1>
+<div class="box" id="mainBox" style="display:none">
+  <h2>QCall Admin Dashboard</h2>
   <div class="stats">
     <div class="stat"><h2 id="sTotal">0</h2><p>Total</p></div>
     <div class="stat"><h2 id="sActive" style="color:#22c55e">0</h2><p>Active</p></div>
-    <div class="stat"><h2 id="sExpired" style="color:#ef4444">0</h2><p>Expired</p></div>
+    <div class="stat"><h2 id="sExp" style="color:#ef4444">0</h2><p>Expired</p></div>
   </div>
-  <div class="card">
-    <h3 style="color:#38bdf8;margin-bottom:1rem">Add New Client</h3>
-    <input type="text" id="cName" placeholder="Restaurant Name"/>
-    <input type="text" id="cPhone" placeholder="Phone e.g. +201001234567"/>
-    <input type="text" id="cInstance" placeholder="UltraMsg Instance"/>
-    <input type="text" id="cToken" placeholder="UltraMsg Token"/>
-    <select id="cPlan">
-      <option value="demo">Demo - 2 days</option>
-      <option value="monthly">Monthly - 30 days</option>
-      <option value="yearly">Yearly - 365 days</option>
-    </select>
-    <button class="btn btn-blue" onclick="addClient()">Add Client</button>
-    <p id="addMsg" style="margin-top:.8rem;text-align:center"></p>
-  </div>
-  <div class="card">
-    <h3 style="color:#38bdf8;margin-bottom:1rem">Clients</h3>
-    <div id="clientsList"></div>
-  </div>
+  <h3>Add New Client</h3>
+  <input type="text" id="cName" placeholder="Restaurant Name" />
+  <input type="text" id="cPhone" placeholder="Phone e.g. +201001234567" />
+  <input type="text" id="cInst" placeholder="UltraMsg Instance" />
+  <input type="text" id="cTok" placeholder="UltraMsg Token" />
+  <select id="cPlan">
+    <option value="demo">Demo - 2 days</option>
+    <option value="monthly">Monthly - 30 days</option>
+    <option value="yearly">Yearly - 365 days</option>
+  </select>
+  <button class="btn b2" id="addBtn">Add Client</button>
+  <p id="addMsg" style="text-align:center;margin-top:.5rem"></p>
+  <h3>Clients</h3>
+  <div id="list"></div>
 </div>
 <script>
-var tok='';
-function login(){
-  var p=document.getElementById('pass').value;
-  fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p})})
-  .then(r=>r.json()).then(d=>{
-    if(d.success){tok=p;document.getElementById('loginDiv').style.display='none';document.getElementById('mainDiv').style.display='block';load();}
-    else alert('Wrong password');
+var tok = "";
+document.getElementById("loginBtn").onclick = function() {
+  var p = document.getElementById("pass").value;
+  fetch("/api/auth", {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({password: p})})
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d.success){
+      tok = p;
+      document.getElementById("loginBox").style.display = "none";
+      document.getElementById("mainBox").style.display = "block";
+      load();
+    } else {
+      document.getElementById("err").textContent = "Wrong password";
+    }
   });
-}
+};
 function load(){
-  fetch('/api/admin/clients',{headers:{'x-admin-token':tok}}).then(r=>r.json()).then(d=>{
-    document.getElementById('sTotal').textContent=d.stats.total;
-    document.getElementById('sActive').textContent=d.stats.active;
-    document.getElementById('sExpired').textContent=d.stats.expired;
-    var html='';
-    if(!d.clients.length) html='<p style="color:#94a3b8;text-align:center">No clients yet</p>';
-    d.clients.forEach(function(c){
-      var exp=new Date(c.expiresAt).toLocaleDateString();
-      html+='<div class="row"><div><strong>'+c.name+'</strong> <span class="badge '+c.status+'">'+c.status+'</span><br><small style="color:#94a3b8">'+c.phone+' | '+c.plan+' | expires: '+exp+'</small></div>'
-      +'<div style="display:flex;gap:.5rem"><button class="btn btn-orange" onclick="extend(''+c.id+'')">+30d</button>'
-      +'<button class="btn btn-red" onclick="del(''+c.id+'')">Delete</button></div></div>';
-    });
-    document.getElementById('clientsList').innerHTML=html;
+  fetch("/api/admin/clients", {headers:{"x-admin-token": tok}})
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    document.getElementById("sTotal").textContent = d.stats.total;
+    document.getElementById("sActive").textContent = d.stats.active;
+    document.getElementById("sExp").textContent = d.stats.expired;
+    var html = "";
+    if(!d.clients.length) html = "<p style='color:#94a3b8;text-align:center'>No clients yet</p>";
+    for(var i=0; i<d.clients.length; i++){
+      var c = d.clients[i];
+      var exp = new Date(c.expiresAt).toLocaleDateString();
+      html += "<div class='row'><div><strong>" + c.name + "</strong> <span class='badge " + c.status + "'>" + c.status + "</span><br><small style='color:#94a3b8'>" + c.phone + " | " + c.plan + " | " + exp + "</small></div>";
+      html += "<div style='display:flex;gap:.5rem'><button class='btn b4' onclick='ext("" + c.id + "")'>+30d</button><button class='btn b3' onclick='del("" + c.id + "")'>Delete</button></div></div>";
+    }
+    document.getElementById("list").innerHTML = html;
   });
 }
-function addClient(){
-  var data={name:document.getElementById('cName').value,phone:document.getElementById('cPhone').value,
-    instance:document.getElementById('cInstance').value,token:document.getElementById('cToken').value,
-    plan:document.getElementById('cPlan').value};
-  if(!data.name||!data.phone||!data.instance||!data.token){alert('Fill all fields');return;}
-  fetch('/api/admin/clients',{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':tok},body:JSON.stringify(data)})
-  .then(r=>r.json()).then(d=>{
-    var msg=document.getElementById('addMsg');
-    if(d.success){msg.style.color='#22c55e';msg.textContent='Added!';load();['cName','cPhone','cInstance','cToken'].forEach(function(id){document.getElementById(id).value=''});}
-    else{msg.style.color='#ef4444';msg.textContent='Error: '+d.error;}
+document.getElementById("addBtn").onclick = function(){
+  var data = {
+    name: document.getElementById("cName").value,
+    phone: document.getElementById("cPhone").value,
+    instance: document.getElementById("cInst").value,
+    token: document.getElementById("cTok").value,
+    plan: document.getElementById("cPlan").value
+  };
+  if(!data.name || !data.phone || !data.instance || !data.token){ alert("Fill all fields"); return; }
+  fetch("/api/admin/clients", {method:"POST", headers:{"Content-Type":"application/json","x-admin-token":tok}, body: JSON.stringify(data)})
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    var m = document.getElementById("addMsg");
+    if(d.success){
+      m.style.color = "#22c55e"; m.textContent = "Client added!";
+      document.getElementById("cName").value = "";
+      document.getElementById("cPhone").value = "";
+      document.getElementById("cInst").value = "";
+      document.getElementById("cTok").value = "";
+      load();
+    } else {
+      m.style.color = "#ef4444"; m.textContent = "Error: " + d.error;
+    }
   });
-}
-function extend(id){
-  fetch('/api/admin/extend/'+id,{method:'POST',headers:{'Content-Type':'application/json','x-admin-token':tok},body:JSON.stringify({days:30})})
-  .then(r=>r.json()).then(d=>{if(d.success){alert('Extended 30 days!');load();}});
+};
+function ext(id){
+  fetch("/api/admin/extend/" + id, {method:"POST", headers:{"Content-Type":"application/json","x-admin-token":tok}, body: JSON.stringify({days:30})})
+  .then(function(r){ return r.json(); })
+  .then(function(d){ if(d.success){ alert("Extended 30 days!"); load(); } });
 }
 function del(id){
-  if(!confirm('Delete?'))return;
-  fetch('/api/admin/clients/'+id,{method:'DELETE',headers:{'x-admin-token':tok}}).then(r=>r.json()).then(d=>{if(d.success)load();});
+  if(!confirm("Delete this client?")) return;
+  fetch("/api/admin/clients/" + id, {method:"DELETE", headers:{"x-admin-token":tok}})
+  .then(function(r){ return r.json(); })
+  .then(function(d){ if(d.success) load(); });
 }
 </script>
 </body>
