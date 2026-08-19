@@ -84,8 +84,8 @@ function load(){
     for(var i=0; i<d.clients.length; i++){
       var c = d.clients[i];
       var exp = new Date(c.expiresAt).toLocaleDateString();
-      html += "<div class='row'><div><strong>" + c.name + "</strong> <span class='badge " + c.status + "'>" + c.status + "</span><br><small style='color:#94a3b8'>" + c.phone + " | " + c.plan + " | " + exp + "</small></div>";
-      html += "<div style='display:flex;gap:.5rem'><button class='btn b4' onclick='ext("" + c.id + "")'>+30d</button><button class='btn b3' onclick='del("" + c.id + "")'>Delete</button></div></div>";
+      html += "<div class=\"row\"><div><strong>" + c.name + "</strong> <span class=\"badge " + c.status + "\">" + c.status + "</span><br><small style=\"color:#94a3b8\">" + c.phone + " | " + c.plan + " | " + exp + "</small></div>";
+      html += "<div style=\"display:flex;gap:.5rem\"><button class=\"btn b4\" onclick=\"ext(this.dataset.id)\" data-id=\"" + c.id + "\">+30d</button> <button class=\"btn b3\" onclick=\"del(this.dataset.id)\" data-id=\"" + c.id + "\">Delete</button></div></div>";
     }
     document.getElementById("list").innerHTML = html;
   });
