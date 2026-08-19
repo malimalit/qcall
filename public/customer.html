@@ -117,7 +117,7 @@ socket.on('order_ready',function(data){
   triggerAlert(data.message || 'Your order is ready at the counter!');
 });
 
-socket.on('order_status',function(data){
+socket.on('order_status',function(data){ if(data.status==='READY'){ triggerAlert('Your order is ready at the counter!'); } 
   if(data.status==='READY') triggerAlert('Your order is ready at the counter!');
 });
 
