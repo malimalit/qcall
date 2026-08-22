@@ -88,11 +88,10 @@ function triggerAlert(message){
   document.getElementById('spinner').style.display='none';
   document.getElementById('status').textContent='🎉 Your order is ready!';
   document.getElementById('status').style.color='#22c55e';
-  if(soundEnabled){
-    sound.currentTime=0;
-    sound.volume=1.0;
-    sound.play().catch(function(e){ console.log(e); });
-  }
+  sound.currentTime=0;
+  sound.volume=1.0;
+  sound.play().catch(function(e){ console.log(e); });
+});
 }
 
 function confirmAndClose(){
@@ -117,7 +116,7 @@ socket.on('order_ready',function(data){
   triggerAlert(data.message || 'Your order is ready at the counter!');
 });
 
-socket.on('order_status',function(data){ if(data.status==='READY'){ triggerAlert('Your order is ready at the counter!'); } 
+socket.on('order_status',function(data){
   if(data.status==='READY') triggerAlert('Your order is ready at the counter!');
 });
 
