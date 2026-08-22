@@ -184,7 +184,8 @@ app.post("/api/orders/call", async (req,res) => {
   if (!order) return res.status(404).json({ success:false });
   order.status = "READY";
   activeOrders.set(String(orderId), order);
-  if (order.customerPhone && restaurantConfig.instance && restaurantConfig.token) {
+  console.log("CALL DEBUG - phone:", order.customerPhone, "instance:", restaurantConfig.instance, "token:", restaurantConfig.token ? "ok" : "missing");
+    if (order.customerPhone && restaurantConfig.instance && restaurantConfig.token) {
     sendWhatsApp(order.customerPhone, "Your Order #" + orderId + " is ready! Come pick it up.\n\nTrack: " + order.trackingUrl);
   }
   io.to("order_" + orderId).emit("order_ready", { orderId, message:"Order #" + orderId + " is ready!" });
