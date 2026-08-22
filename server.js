@@ -178,8 +178,8 @@ app.post("/api/orders/create", async (req,res) => {
   } catch(err) { res.status(500).json({ success:false, error:"QR failed" }); }
 });
 
-app.post("/api/orders/:orderId/call", async (req,res) => {
-  const orderId = req.params.orderId || req.body.orderId;
+app.post("/api/orders/call", async (req,res) => {
+  const { orderId } = req.body;
   const order = activeOrders.get(String(orderId));
   if (!order) return res.status(404).json({ success:false });
   order.status = "READY";
