@@ -88,10 +88,11 @@ function triggerAlert(message){
   document.getElementById('spinner').style.display='none';
   document.getElementById('status').textContent='🎉 Your order is ready!';
   document.getElementById('status').style.color='#22c55e';
-  sound.currentTime=0;
-  sound.volume=1.0;
-  sound.play().catch(function(e){ console.log(e); });
-});
+  if(soundEnabled){
+    sound.currentTime=0;
+    sound.volume=1.0;
+    sound.play().catch(function(e){ console.log(e); });
+  }
 }
 
 function confirmAndClose(){
