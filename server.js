@@ -130,6 +130,19 @@ app.post("/api/admin/clients", async (req,res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+app.put("/api/clients/:id", async (req, res) => {
+  if (!checkAdmin(req,res)) return;
+  try {
+    const { name, phone, instance, token } = req.body;
+    await pool.query(
+      "UPDATE clients SET name=$1, phone=$2, instance=$3, token=$4 WHERE id=$5",
+      [name, phone, instance, token, req.params.id]
+    );
+    await loadConfig();
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
 app.delete("/api/admin/clients/:id", async (req,res) => {
   if (!checkAdmin(req,res)) return;
   try {
