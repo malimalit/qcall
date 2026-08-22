@@ -28,6 +28,18 @@ let restaurantConfig = {
   countryCode: process.env.COUNTRY_CODE || "20"
 };
 
+async function loadConfig() {
+  try {
+    const r = await pool.query('SELECT * FROM clients WHERE status=$1 LIMIT 1', ['active']);
+    if(r.rows.length > 0) {
+      const c = r.rows[0];
+      restaurantConfig.instance = c.instance;
+      restaurantConfig.token = c.token;
+      console.log('Config loaded from DB:', c.name);
+    }
+  } catch(e) { console.log('Config load error:', e.message); }
+}
+
 async function initDB() {
   try {
     await pool.query(`CREATE TABLE IF NOT EXISTS clients (
@@ -208,4 +220,4 @@ io.on("connection", (socket) => {
   });
 });
 
-server.listen(PORT, "0.0.0.0", () => { console.log("QCall running on port " + PORT); initDB(); });
+server.listen(PORT, "0.0.0.0", () => { console.log("QCall running on port " + PORT); initDB().then(() => loadConfig()); });
