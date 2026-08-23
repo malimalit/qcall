@@ -95,7 +95,8 @@ app.post('/api/orders/call', async (req,res) => {
   order.status = 'READY';
   activeOrders.set(String(orderId), order);
 
-  if(order.customerPhone && restaurantConfig && restaurantConfig.instance && restaurantConfig.token){
+  await loadConfigFromDB();
+    if(order.customerPhone && restaurantConfig && restaurantConfig.instance && restaurantConfig.token){
     sendWhatsApp(order.customerPhone, "🎉 Your Order #"+orderId+" is ready! Please come pick it up at the counter.\n\n👉 Track here:\n"+order.trackingUrl);
   }
 
