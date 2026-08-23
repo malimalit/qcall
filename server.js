@@ -1,5 +1,41 @@
 require('dotenv').config();
 const express = require('express');
+const { Pool } = require('pg');
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+async function initDB() {
+  try {
+    await pool.query(`CREATE TABLE IF NOT EXISTS clients (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      phone TEXT,
+      instance TEXT,
+      token TEXT,
+      plan TEXT DEFAULT 'monthly',
+      status TEXT DEFAULT 'active',
+      created_at TIMESTAMP DEFAULT NOW(),
+      expires_at TIMESTAMP DEFAULT NOW() + INTERVAL '30 days'
+    )`);
+    console.log('DB ready');
+    await loadConfigFromDB();
+  } catch(e) { console.log('DB init error:', e.message); }
+}
+
+async function loadConfigFromDB() {
+  try {
+    const r = await pool.query("SELECT * FROM clients WHERE status='active' LIMIT 1");
+    if(r.rows.length > 0) {
+      const c = r.rows[0];
+      restaurantConfig.instance = c.instance;
+      restaurantConfig.token = c.token;
+      console.log('Config loaded:', c.name);
+    }
+  } catch(e) { console.log('Config load error:', e.message); }
+}
 const http = require('http');
 const path = require('path');
 const QRCode = require('qrcode');
@@ -128,6 +164,7 @@ app.post('/api/orders/acknowledge', (req, res) => {
   res.json({ success: true });
 });
 
+initDB();
 server.listen(PORT, '0.0.0.0', () => console.log('🚀 QCall Server running on port ' + PORT));
 
 // WhatsApp notification via UltraMsg
