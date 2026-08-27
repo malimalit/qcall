@@ -174,6 +174,7 @@ async function sendWhatsApp(phone, message) {
     const axios = require('axios');
     const instance = restaurantConfig.instance || process.env.ULTRAMSG_INSTANCE;
     const token = restaurantConfig.token || process.env.ULTRAMSG_TOKEN;
+    console.log('WA DEBUG - instance:', instance, 'token:', token ? 'OK' : 'MISSING', 'phone:', phone);
     if (!instance || !token || !phone) return;
     await axios.post(`https://api.ultramsg.com/${instance}/messages/chat`, {
       token,
