@@ -166,6 +166,69 @@ app.post('/api/orders/acknowledge', (req, res) => {
 });
 
 initDB();
+
+// ===== CLIENTS API =====
+app.get('/api/clients', async (req, res) => {
+  try {
+    const r = await pool.query('SELECT * FROM clients ORDER BY id DESC');
+    res.json({ success: true, clients: r.rows });
+  } catch(e) { res.json({ success: false, error: e.message }); }
+});
+
+app.post('/api/clients', async (req, res) => {
+  try {
+    const { name, phone, instance, token, plan } = req.body;
+    const days = plan === 'yearly' ? 365 : plan === 'monthly' ? 30 : 7;
+    const r = await pool.query(
+      'INSERT INTO clients (name, phone, instance, token, plan, status, expires_at) VALUES ($1,$2,$3,$4,$5,$6, NOW() + $7::interval) RETURNING *',
+      [name, phone, instance, token, plan, plan==='demo'?'demo':'active', days+' days']
+    );
+    res.json({ success: true, client: r.rows[0] });
+  } catch(e) { res.json({ success: false, error: e.message }); }
+});
+
+app.put('/api/clients/:id', async (req, res) => {
+  try {
+    const { name, phone, instance, token, status, expires_at } = req.body;
+    await pool.query(
+      'UPDATE clients SET name=$1, phone=$2, instance=$3, token=$4, status=$5, expires_at=$6 WHERE id=$7',
+      [name, phone, instance, token, status, expires_at||null, req.params.id]
+    );
+    await loadConfigFromDB();
+    res.json({ success: true });
+  } catch(e) { res.json({ success: false, error: e.message }); }
+});
+
+app.post('/api/clients/:id/demo', async (req, res) => {
+  try {
+    await pool.query(
+      "UPDATE clients SET status='demo', expires_at=NOW() + interval '7 days' WHERE id=$1",
+      [req.params.id]
+    );
+    res.json({ success: true });
+  } catch(e) { res.json({ success: false, error: e.message }); }
+});
+
+app.post('/api/clients/:id/activate', async (req, res) => {
+  try {
+    const { plan } = req.body;
+    const days = plan === 'yearly' ? 365 : 30;
+    await pool.query(
+      "UPDATE clients SET status='active', plan=$1, expires_at=NOW() + $2::interval WHERE id=$3",
+      [plan, days+' days', req.params.id]
+    );
+    await loadConfigFromDB();
+    res.json({ success: true });
+  } catch(e) { res.json({ success: false, error: e.message }); }
+});
+
+app.delete('/api/clients/:id', async (req, res) => {
+  try {
+    await pool.query('DELETE FROM clients WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch(e) { res.json({ success: false, error: e.message }); }
+});
+
 server.listen(PORT, '0.0.0.0', () => console.log('🚀 QCall Server running on port ' + PORT));
 
 // WhatsApp notification via UltraMsg
