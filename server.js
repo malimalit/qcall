@@ -18,7 +18,7 @@ async function initDB() {
       plan TEXT DEFAULT 'monthly',
       status TEXT DEFAULT 'active',
       created_at TIMESTAMP DEFAULT NOW(),
-      expires_at TIMESTAMP DEFAULT NOW() + INTERVAL '30 days'
+      expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '30 days'
     )`);
 console.log('DB ready');
     await loadConfigFromDB();
