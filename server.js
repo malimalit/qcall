@@ -20,7 +20,10 @@ async function initDB() {
       created_at TIMESTAMP DEFAULT NOW(),
       expires_at TIMESTAMP DEFAULT NOW() + INTERVAL '30 days'
     )`);
-    console.log('DB ready');
+    await pool.query("ALTER TABLE clients ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'active'");
+await pool.query("ALTER TABLE clients ADD COLUMN IF NOT EXISTS plan TEXT DEFAULT 'monthly'");
+await pool.query("ALTER TABLE clients ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP DEFAULT NOW() + INTERVAL '30 days'");
+console.log('DB ready');
     await loadConfigFromDB();
   } catch(e) { console.log('DB init error:', e.message); }
 }
