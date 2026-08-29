@@ -229,6 +229,8 @@ app.delete('/api/clients/:id', async (req, res) => {
   } catch(e) { res.json({ success: false, error: e.message }); }
 });
 
+
+app.get('/admin', (req,res) => res.sendFile(path.join(__dirname,'public','admin.html')));
 server.listen(PORT, '0.0.0.0', () => console.log('🚀 QCall Server running on port ' + PORT));
 
 // WhatsApp notification via UltraMsg
