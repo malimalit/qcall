@@ -9,17 +9,7 @@ const pool = new Pool({
 
 async function initDB() {
   try {
-    await pool.query(`CREATE TABLE IF NOT EXISTS clients (
-      id SERIAL PRIMARY KEY,
-      name TEXT NOT NULL,
-      phone TEXT,
-      instance TEXT,
-      token TEXT,
-      plan TEXT DEFAULT 'monthly',
-      status TEXT DEFAULT 'active',
-      created_at TIMESTAMP DEFAULT NOW(),
-      expires_at TIMESTAMPTZ DEFAULT NOW() + INTERVAL '30 days'
-    )`);
+    
 console.log('DB ready');
     await loadConfigFromDB();
   } catch(e) { console.log('DB init error:', e.message); }
