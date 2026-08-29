@@ -180,8 +180,8 @@ app.post('/api/clients', async (req, res) => {
     const { name, phone, instance, token, plan } = req.body;
     const days = plan === 'yearly' ? 365 : plan === 'monthly' ? 30 : 7;
     const r = await pool.query(
-      'INSERT INTO clients (name, phone, instance, token, plan, status, expires_at) VALUES ($1,$2,$3,$4,$5,$6, NOW() + $7::interval) RETURNING *',
-      [name, phone, instance, token, plan, plan==='demo'?'demo':'active', (plan==='yearly'?365:plan==='monthly'?30:7)+' days']
+      'INSERT INTO clients (name, phone, instance, token, plan, status) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
+      [name, phone, instance, token, plan, plan==='demo'?'demo':'active']
     );
     res.json({ success: true, client: r.rows[0] });
   } catch(e) { res.json({ success: false, error: e.message }); }
