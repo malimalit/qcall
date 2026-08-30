@@ -34,7 +34,6 @@
       font-weight: 800;
       color: #38bdf8;
     }
-    .status-icon { font-size: 4rem; }
     .status-text {
       font-size: 1.4rem;
       font-weight: 600;
@@ -65,9 +64,7 @@
     }
     .ack-btn:hover { opacity: 0.85; }
     .not-found { color: #ef4444; font-size: 1.1rem; }
-    .pulse {
-      animation: pulse 1.5s infinite;
-    }
+    .pulse { animation: pulse 1.5s infinite; }
     @keyframes pulse {
       0%, 100% { transform: scale(1); }
       50% { transform: scale(1.05); }
@@ -83,13 +80,13 @@
   <button class="ack-btn" id="ackBtn">✅ Got it! I'm on my way</button>
 </div>
 
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+<!-- Socket.io -->
 <script src="/socket.io/socket.io.js"></script>
-<script>
-  // Request permission for browser notifications when the page loads
-  if ('Notification' in window && Notification.permission !== 'granted') {
-    Notification.requestPermission();
-  }
 
+<script>
   const params = new URLSearchParams(window.location.search);
   const orderId = params.get('orderId');
 
@@ -135,13 +132,11 @@
       ackBtn.classList.add('pulse');
       playSound();
 
-      // Trigger a system notification popup if allowed
       if ('Notification' in window && Notification.permission === 'granted') {
         const notification = new Notification(`Order #${orderId} is Ready! 🎉`, {
           body: 'Tap to view your order and head to the counter.',
           requireInteraction: true
         });
-
         notification.onclick = function() {
           window.focus();
           notification.close();
@@ -174,20 +169,44 @@
           osc.stop(ctx.currentTime + (i + 1) * duration);
         });
       } catch (e) {
-        console.log("Audio playback blocked until user interaction.");
+        console.log("Audio playback blocked.");
       }
     }
+
+    // Initialize Firebase Messaging & Register Token for Background Push
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/firebase-messaging-sw.js')
+        .then((registration) => {
+          console.log('Service Worker registered!');
+          
+          firebase.initializeApp({
+            apiKey: "AIzaSyAqSil0vbir0TklpqAORr5ZIh6RKbwmtZk",
+            authDomain: "qcall-e1ec9.firebaseapp.com",
+            projectId: "qcall-e1ec9",
+            storageBucket: "qcall-e1ec9.firebasestorage.app",
+            messagingSenderId: "775125377549",
+            appId: "1:775125377549:web:1de5c4eb8c706bf7fceb44"
+          });
+
+          const messaging = firebase.messaging();
+
+          Notification.requestPermission().then((permission) => {
+            if (permission === 'granted') {
+              messaging.getToken({ serviceWorkerRegistration: registration }).then((currentToken) => {
+                if (currentToken) {
+                  socket.emit('register_token', { orderId, token: currentToken });
+                }
+              }).catch((err) => {
+                console.log('Error retrieving token:', err);
+              });
+            }
+          });
+        })
+        .catch((err) => {
+          console.log('Service Worker registration failed:', err);
+        });
+    }
   }
-  // Register Service Worker for Push Notifications
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/firebase-messaging-sw.js')
-    .then((registration) => {
-      console.log('Service Worker registered!');
-    })
-    .catch((err) => {
-      console.log('Service Worker registration failed:', err);
-    });
-}
 </script>
 </body>
 </html>

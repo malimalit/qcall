@@ -3,12 +3,13 @@ const http = require('http');
 const path = require('path');
 const QRCode = require('qrcode');
 const { Server } = require('socket.io');
-const { createClient } = require('@supabase/supabase-js');
+const admin = require('firebase-admin');
 
-// Initialize Supabase Client
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://yhxvvfumlrplgjbryptv.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_publishable_jGhRs-maHlZiyyOjgi3GNA_XirF4sJe';
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+// Initialize Firebase Admin SDK using your downloaded key
+const serviceAccount = require('./serviceAccountKey.json');
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
 const app = express();
 const server = http.createServer(app);
@@ -17,6 +18,7 @@ const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 
 const activeOrders = new Map();
+const deviceTokens = new Map(); // Stores customer FCM device tokens
 const reminderIntervals = new Map();
 let orderCounter = 100;
 
@@ -51,14 +53,13 @@ app.post('/api/orders/create', async (req, res) => {
 
     activeOrders.set(orderId, order);
     io.emit('orders_updated', getOrdersList());
-
     res.json({ success: true, ...order });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Failed to generate QR Code' });
   }
 });
 
-app.post('/api/orders/call', (req, res) => {
+app.post('/api/orders/call', async (req, res) => {
   const { orderId } = req.body;
   const order = activeOrders.get(String(orderId));
 
@@ -67,10 +68,34 @@ app.post('/api/orders/call', (req, res) => {
   order.status = 'READY';
   activeOrders.set(String(orderId), order);
 
+  // 1. Send live socket event
   io.to(`order_${orderId}`).emit('order_ready', {
     orderId,
     message: `Order #${orderId} is ready! Please come pick it up.`
   });
+
+  // 2. Send Firebase Cloud Push Notification (Triggers locked-screen popups)
+  const fcmToken = deviceTokens.get(String(orderId));
+  if (fcmToken) {
+    const message = {
+      token: fcmToken,
+      notification: {
+        title: `Order #${orderId} is Ready! 🎉`,
+        body: 'Please come to the counter to pick up your order.'
+      },
+      webpush: {
+        fcmOptions: {
+          link: `${req.headers['x-forwarded-proto'] || req.protocol}://${req.headers['x-forwarded-host'] || req.get('host')}/customer.html?orderId=${orderId}`
+        }
+      }
+    };
+
+    try {
+      await admin.messaging().send(message);
+    } catch (error) {
+      console.log('Error sending FCM push notification:', error);
+    }
+  }
 
   if (reminderIntervals.has(String(orderId))) {
     clearInterval(reminderIntervals.get(String(orderId)));
@@ -98,6 +123,7 @@ function removeOrder(orderId) {
     reminderIntervals.delete(String(orderId));
   }
   activeOrders.delete(String(orderId));
+  deviceTokens.delete(String(orderId));
   io.emit('orders_updated', getOrdersList());
 }
 
@@ -113,6 +139,13 @@ io.on('connection', (socket) => {
     socket.emit('order_status', {
       status: order ? order.status : 'NOT_FOUND'
     });
+  });
+
+  // Register customer device token for background push
+  socket.on('register_token', ({ orderId, token }) => {
+    if (orderId && token) {
+      deviceTokens.set(String(orderId), token);
+    }
   });
 
   socket.on('order_acknowledged', ({ orderId }) => {
