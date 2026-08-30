@@ -148,6 +148,30 @@
   const SUPABASE_ANON_KEY = 'sb_publishable_jGhRs-maHlZiyyOjgi3GNA_XirF4sJe';
   const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
+  // Audio alert function using Web Audio API
+  function playAlertSound() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5 note
+      oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1); // A5 note
+
+      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.5);
+    } catch (e) {
+      console.log("Audio waiting for user interaction");
+    }
+  }
+
   // 2. Create a New Order
   async function createOrder() {
     const randomOrderNumber = Math.floor(100 + Math.random() * 900).toString();
@@ -248,11 +272,12 @@
     `;
   }
 
-  // 6. Realtime Listener
+  // 6. Realtime Listener with Sound Trigger
   function setupRealtime() {
     supabase
       .channel('public:orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+        playAlertSound(); // Play audio alert on any order update!
         loadOrders();
       })
       .subscribe();
