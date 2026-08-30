@@ -18,4 +18,11 @@ admin.initializeApp({
 });
 
 const app = express();
-// ... (the rest of your server.js code stays exactly the same)
+const server = http.createServer(app);
+const io = new Server(server);
+
+// Add your admin route right here alongside your other route definitions
+app.get(['/admin', '/admin.html'], (req, res) =>
+  res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+
+// ... (rest of your app.use, routes, and socket logic)
