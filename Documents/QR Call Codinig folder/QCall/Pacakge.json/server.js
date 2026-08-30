@@ -52,9 +52,6 @@ app.post('/api/orders/create', async (req, res) => {
     activeOrders.set(orderId, order);
     io.emit('orders_updated', getOrdersList());
 
-    // Optional: Save order to Supabase database if your table exists
-    // await supabase.from('orders').insert([{ order_id: orderId, status: 'PREPARING' }]);
-
     res.json({ success: true, ...order });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Failed to generate QR Code' });
