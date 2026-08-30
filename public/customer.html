@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QCall - Order Tracking</title>
+<script src="/socket.io/socket.io.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center}
+.card{background:#1e293b;border-radius:20px;padding:2.5rem 2rem;width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:1.2rem}
+.order-number{font-size:4rem;font-weight:800;color:#38bdf8}
+.status{font-size:1.3rem;font-weight:600;color:#94a3b8}
+.spinner{width:50px;height:50px;border:5px solid #334155;border-top-color:#38bdf8;border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+input{width:100%;padding:.9rem 1rem;background:#0f172a;border:1px solid #334155;border-radius:10px;color:#f1f5f9;font-size:1.1rem;text-align:center}
+input:focus{outline:none;border-color:#38bdf8}
+.btn{width:100%;padding:1rem;background:#1e40af;color:white;border:none;border-radius:12px;font-size:1.1rem;font-weight:700;cursor:pointer}
+.btn.done{background:#166534;pointer-events:none}
+.overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.9);align-items:center;justify-content:center;z-index:9999}
+.box{background:#14532d;border:3px solid #22c55e;border-radius:24px;padding:2rem;width:88%;max-width:360px;text-align:center}
+.box h2{font-size:2rem;font-weight:800;color:#22c55e;margin-bottom:.5rem}
+.box p{font-size:1rem;color:#bbf7d0;margin-bottom:1.5rem}
+.okbtn{width:100%;padding:1.2rem;background:#22c55e;color:#0f172a;border:none;border-radius:14px;font-size:1.1rem;font-weight:800;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="order-number" id="orderNum">—</div>
+  <div class="spinner" id="spinner"></div>
+  <div class="status" id="status">Enter your WhatsApp number</div>
+  <input type="tel" id="phone" placeholder="e.g. 01001234567"/>
+  <button class="btn" id="btn" onclick="enableAudio()">🔔 Enable Sound & WhatsApp Alerts</button>
+</div>
+<div class="overlay" id="overlay">
+  <div class="box">
+    <h2>🎉 Order Ready!</h2>
+    <p id="modalMsg">Your order is waiting at the counter!</p>
+    <button class="okbtn" onclick="confirmAndClose()">✅ Got it! I'm on my way</button>
+  </div>
+</div>
+<audio id="sound" loop preload="auto" playsinline>
+  <source src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" type="audio/mpeg">
+</audio>
+<script>
+var orderId = new URLSearchParams(location.search).get('orderId');
+var sound = document.getElementById('sound');
+var soundEnabled = false;
+var orderReady = false;
+
+if(orderId) document.getElementById('orderNum').textContent = '#'+orderId;
+else {
+  document.getElementById('orderNum').textContent='?';
+  document.getElementById('spinner').style.display='none';
+  document.getElementById('btn').style.display='none';
+  document.getElementById('status').textContent='No order found.';
+}
+
+function enableAudio(){
+  var phone = document.getElementById('phone').value.trim();
+  if(!phone){ alert('Please enter your WhatsApp number'); return; }
+
+  // Save phone to server
+  fetch('/api/orders/phone', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({orderId:orderId, phone:phone})
+  });
+
+  sound.volume=1.0;
+  sound.play().then(function(){
+    sound.pause();
+    sound.currentTime=0;
+    soundEnabled=true;
+    var btn=document.getElementById('btn');
+    btn.textContent='✅ Alerts Enabled!';
+    btn.classList.add('done');
+    document.getElementById('phone').style.display='none';
+    document.getElementById('status').textContent='Waiting for your order...';
+    if(orderReady) triggerAlert('Your order is ready at the counter!');
+  }).catch(function(e){ console.log(e); });
+}
+
+function triggerAlert(message){
+  orderReady=true;
+  document.getElementById('modalMsg').textContent=message;
+  document.getElementById('overlay').style.display='flex';
+  document.getElementById('spinner').style.display='none';
+  document.getElementById('status').textContent='🎉 Your order is ready!';
+  document.getElementById('status').style.color='#22c55e';
+  if(soundEnabled){
+    sound.currentTime=0;
+    sound.volume=1.0;
+    sound.play().catch(function(e){ console.log(e); });
+  }
+}
+
+function confirmAndClose(){
+  sound.pause();
+  sound.currentTime=0;
+  sound.src='';
+  orderReady=false;
+  document.getElementById('overlay').style.display='none';
+  if(orderId) socket.emit('order_acknowledged',{orderId:String(orderId)});
+  document.querySelector('.card').innerHTML='<div style="text-align:center;padding:2rem"><div style="font-size:4rem">🙌</div><h2 style="color:#22c55e;font-size:2rem;margin:1rem 0">Thank You!</h2><p style="color:#94a3b8;font-size:1.1rem">Your order is ready at the counter.<br>Please come pick it up!</p></div>';
+}
+
+var socket = io({ transports:['polling','websocket'] });
+
+socket.on('connect',function(){
+  if(orderId){
+    socket.emit('join_order',{orderId:String(orderId)});
+  }
+});
+
+socket.on('order_ready',function(data){
+  triggerAlert(data.message || 'Your order is ready at the counter!');
+});
+
+socket.on('order_status',function(data){
+  if(data.status==='READY') triggerAlert('Your order is ready at the counter!');
+});
+
+socket.on('disconnect',function(){
+  setTimeout(function(){ socket.connect(); },2000);
+});
+</script>
+</body>
+</html>
