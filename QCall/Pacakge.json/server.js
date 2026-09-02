@@ -58,14 +58,17 @@ app.post('/api/clients', async (req, res) => {
             }]);
 
         if (error) {
-            console.error("Supabase error object:", JSON.stringify(error, null, 2));
-            return res.status(400).json({ success: false, error: error.message || error.details || JSON.stringify(error) });
+            console.error("FULL SUPABASE ERROR:", JSON.stringify(error, null, 2));
+            return res.status(400).json({ 
+                success: false, 
+                error: error.message || error.details || error.hint || "Database insert failed" 
+            });
         }
 
         res.status(200).json({ success: true, id: clientId, data });
     } catch (err) {
-        console.error("Server catch error:", err);
-        res.status(500).json({ success: false, error: err.message || "Internal server error" });
+        console.error("Server catch error:", err.message);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 // API Route to Delete Client
