@@ -10,7 +10,7 @@ const server = http.createServer(app);
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public'))); // Adjust if your static folder is different
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Initialize Supabase Client using Environment Variables
 const supabaseUrl = process.env.SUPABASE_URL;
