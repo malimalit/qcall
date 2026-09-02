@@ -21,8 +21,21 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Add your admin route right here alongside your other route definitions
-app.get(['/admin', '/admin.html'], (req, res) =>
-  res.sendFile(path.join(__dirname, 'public', 'admin.html')));
+// Middleware to parse JSON and URL-encoded form data
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// ... (rest of your app.use, routes, and socket logic)
+// Serve static files (HTML, CSS, JS) from the 'public' folder
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Admin routes
+app.get(['/admin', '/admin.html'], (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
+// ... (add the rest of your app routes and socket logic below if you have any)
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`);
+});
