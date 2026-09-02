@@ -1,13 +1,51 @@
-const crypto = require('crypto'); // Add this near the top of server.js if it's not already there
+const express = require('express');
+const http = require('http');
+const path = require('path');
+const crypto = require('crypto');
+const { createClient } = require('@supabase/supabase-js');
 
-// ... existing setup / middleware ...
+const app = express();
+const server = http.createServer(app);
 
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(express.static(path.join(__dirname, 'public'))); // Adjust if your static folder is different
+
+// Initialize Supabase Client using Environment Variables
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.error("Missing Supabase environment variables!");
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+console.log("DB ready");
+
+// API Route to Get Clients
+app.get('/api/clients', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('clients')
+            .select('*');
+
+        if (error) throw error;
+        res.status(200).json({ success: true, clients: data });
+    } catch (err) {
+        console.error("Error fetching clients:", err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// API Route to Add Client with Generated UUID
 app.post('/api/clients', async (req, res) => {
     try {
         // 1. Generate a unique ID for the client
         const clientId = crypto.randomUUID(); 
 
-        const { name, phone, instance, token } = req.body;
+        const { name, phone, instance, token, plan, expires } = req.body;
 
         // 2. Insert into your Supabase database table
         const { data, error } = await supabase
@@ -17,7 +55,9 @@ app.post('/api/clients', async (req, res) => {
                 name: name, 
                 phone: phone, 
                 instance: instance, 
-                token: token 
+                token: token,
+                plan: plan || 'Active',
+                expires: expires || null
             }]);
 
         if (error) {
@@ -29,4 +69,31 @@ app.post('/api/clients', async (req, res) => {
         console.error("Error adding client:", err.message);
         res.status(500).json({ success: false, error: err.message });
     }
+});
+
+// API Route to Delete Client
+app.delete('/api/clients/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { error } = await supabase
+            .from('clients')
+            .delete()
+            .eq('id', id);
+
+        if (error) throw error;
+        res.status(200).json({ success: true });
+    } catch (err) {
+        console.error("Error deleting client:", err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+// Serve admin page
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'admin.html'));
+});
+
+const PORT = process.env.PORT || 8080;
+server.listen(PORT, () => {
+    console.log(`🚀 QCall Server running on port ${PORT}`);
 });
