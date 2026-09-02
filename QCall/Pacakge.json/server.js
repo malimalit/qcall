@@ -42,15 +42,13 @@ app.get('/api/clients', async (req, res) => {
 // API Route to Add Client with Generated UUID
 app.post('/api/clients', async (req, res) => {
     try {
+        const clientId = crypto.randomUUID(); 
         const { name, phone, instance, token, plan, expires } = req.body;
-
-        // Explicitly generate a unique id on the server to prevent null constraints
-        const clientId = crypto.randomUUID();
 
         const { data, error } = await supabase
             .from('clients')
             .insert([{ 
-                id: clientId,
+                id: clientId, 
                 name: name, 
                 phone: phone, 
                 instance: instance, 
@@ -59,10 +57,7 @@ app.post('/api/clients', async (req, res) => {
                 expires: expires || null
             }]);
 
-        if (error) {
-            throw error;
-        }
-
+        if (error) throw error;
         res.status(200).json({ success: true, id: clientId, data });
     } catch (err) {
         console.error("Error adding client:", err.message);
