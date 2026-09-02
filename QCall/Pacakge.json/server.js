@@ -40,10 +40,14 @@ app.get('/api/clients', async (req, res) => {
 });
 
 // API Route to Add Client with Generated UUID
+const crypto = require('crypto'); // Ensure crypto is imported
+
 app.post('/api/clients', async (req, res) => {
     try {
         const clientId = crypto.randomUUID(); 
         const { name, phone, instance, token, plan, expires } = req.body;
+
+        console.log("Generated clientId:", clientId);
 
         const { data, error } = await supabase
             .from('clients')
@@ -59,17 +63,14 @@ app.post('/api/clients', async (req, res) => {
             .select();
 
         if (error) {
-            console.error("Supabase insert failed:", error);
-            return res.status(400).json({ 
-                success: false, 
-                error: error.message || error.details || "Database insertion error occurred" 
-            });
+            console.error("Supabase error:", error);
+            return res.status(400).json({ success: false, error: error.message || error.details });
         }
 
         res.status(200).json({ success: true, id: clientId, data });
     } catch (err) {
         console.error("Server exception:", err.message);
-        res.status(500).json({ success: false, error: err.message || "Server error" });
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 // API Route to Delete Client
