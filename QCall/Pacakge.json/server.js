@@ -45,8 +45,6 @@ app.post('/api/clients', async (req, res) => {
         const clientId = crypto.randomUUID(); 
         const { name, phone, instance, token, plan, expires } = req.body;
 
-        console.log("Attempting to insert client:", { clientId, name, phone, instance, token, plan, expires });
-
         const { data, error } = await supabase
             .from('clients')
             .insert([{ 
@@ -60,14 +58,14 @@ app.post('/api/clients', async (req, res) => {
             }]);
 
         if (error) {
-            console.error("Supabase insert error details:", JSON.stringify(error, null, 2));
-            throw error;
+            console.error("Supabase error object:", JSON.stringify(error, null, 2));
+            return res.status(400).json({ success: false, error: error.message || error.details || JSON.stringify(error) });
         }
 
         res.status(200).json({ success: true, id: clientId, data });
     } catch (err) {
-        console.error("Error adding client catch block:", err.message);
-        res.status(500).json({ success: false, error: err.message });
+        console.error("Server catch error:", err);
+        res.status(500).json({ success: false, error: err.message || "Internal server error" });
     }
 });
 // API Route to Delete Client
