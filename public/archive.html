@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QCall - Archive</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:#0f172a;color:#f1f5f9;min-height:100vh;padding:2rem}
+h1{font-size:1.8rem;font-weight:800;color:#38bdf8;margin-bottom:1.5rem;text-align:center}
+.stats{display:flex;gap:1rem;justify-content:center;margin-bottom:2rem;flex-wrap:wrap}
+.stat{background:#1e293b;border-radius:12px;padding:1rem 2rem;text-align:center}
+.stat-number{font-size:2rem;font-weight:800;color:#22c55e}
+.stat-label{font-size:.85rem;color:#94a3b8}
+table{width:100%;border-collapse:collapse;background:#1e293b;border-radius:12px;overflow:hidden}
+th{background:#0f172a;padding:1rem;text-align:left;font-size:.85rem;color:#94a3b8;text-transform:uppercase}
+td{padding:1rem;border-bottom:1px solid #334155;font-size:.95rem}
+tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:.3rem .8rem;border-radius:20px;font-size:.8rem;font-weight:700}
+.badge.ready{background:#14532d;color:#22c55e}
+.badge.preparing{background:#1e3a5f;color:#38bdf8}
+.clear-btn{display:block;margin:1.5rem auto 0;padding:.8rem 2rem;background:#7f1d1d;color:white;border:none;border-radius:10px;font-size:1rem;font-weight:700;cursor:pointer}
+.empty{text-align:center;padding:3rem;color:#94a3b8}
+</style>
+</head>
+<body>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem">
+  <a href="/cashier.html" style="background:#1e40af;color:white;padding:.7rem 1.5rem;border-radius:10px;text-decoration:none;font-weight:700">← Cashier</a>
+  <h1 style="margin:0">📋 Orders Archive</h1>
+  <div style="width:100px"></div>
+</div>
+<div class="stats">
+  <div class="stat">
+    <div class="stat-number" id="totalCount">0</div>
+    <div class="stat-label">Total Orders</div>
+  </div>
+  <div class="stat">
+    <div class="stat-number" id="completedCount">0</div>
+    <div class="stat-label">Completed</div>
+  </div>
+</div>
+<table>
+  <thead>
+    <tr>
+      <th>Order #</th>
+      <th>Time</th>
+      <th>Status</th>
+      <th>Phone</th>
+    </tr>
+  </thead>
+  <tbody id="archiveBody">
+    <tr><td colspan="4" class="empty">No archived orders yet.</td></tr>
+  </tbody>
+</table>
+<button class="clear-btn" onclick="clearArchive()">🗑️ Clear Archive</button>
+<script>
+function loadArchive(){
+  var orders = JSON.parse(localStorage.getItem('qcall_archive') || '[]');
+  document.getElementById('totalCount').textContent = orders.length;
+  document.getElementById('completedCount').textContent = orders.length;
+  var tbody = document.getElementById('archiveBody');
+  if(orders.length === 0){
+    tbody.innerHTML = '<tr><td colspan="4" class="empty">No archived orders yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = orders.reverse().map(function(o){
+    return '<tr>'+
+      '<td><strong>#'+o.orderId+'</strong></td>'+
+      '<td>'+o.completedAt+'</td>'+
+      '<td><span class="badge ready">✅ Completed</span></td>'+
+      '<td>'+(o.customerPhone || '—')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+function clearArchive(){
+  if(confirm('Clear all archived orders?')){
+    localStorage.removeItem('qcall_archive');
+    loadArchive();
+  }
+}
+
+loadArchive();
+</script>
+</body>
+</html>

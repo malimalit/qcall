@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Call | Premium Demo</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body class="landing-page">
+    <div class="page-shell">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <img class="brand-logo" src="https://cdn.quickress.com/logo/19_17785102243971.jpeg" alt="Daily Sips logo" />
+          <div>
+            <p class="eyebrow">Hospitality technology</p>
+            <h1>Call</h1>
+          </div>
+        </div>
+        <div class="header-actions">
+          <span class="status-chip">Live demo</span>
+          <a class="secondary-button" href="/cashier">Staff Dashboard</a>
+        </div>
+      </header>
+
+      <main>
+        <section class="card hero-panel">
+          <div class="hero-content">
+            <p class="eyebrow accent">QR ordering + pickup alert system</p>
+            <h2>Modern self-service for restaurants and cafes.</h2>
+            <p class="hero-copy">
+              Customers scan a QR code, place or track their order, and receive an instant mobile notification when it is ready — with no app download required.
+            </p>
+            <div class="demo-pills">
+              <span>📱 No app needed</span>
+              <span>🔔 Instant mobile alert</span>
+              <span>🧾 Simple QR flow</span>
+              <span>🛠️ Easy to integrate</span>
+            </div>
+          </div>
+
+          <div class="hero-visual">
+            <div class="phone-mockup">
+              <div class="phone-topbar">
+                <span>9:41</span>
+                <span>📶</span>
+              </div>
+              <div class="phone-brand">Call</div>
+              <div class="phone-status">Order ready</div>
+              <div class="phone-box">
+                <strong>Ready for pickup</strong>
+                <small>Table 3 • Order #204</small>
+              </div>
+              <div class="phone-button">Tap to view</div>
+            </div>
+          </div>
+        </section>
+
+        <section class="feature-grid">
+          <article class="info-card">
+            <div class="mini-icon">01</div>
+            <h3>Scan QR</h3>
+            <p>Customers open a table or outlet QR using their mobile camera and instantly reach the order page.</p>
+          </article>
+          <article class="info-card">
+            <div class="mini-icon">02</div>
+            <h3>Request service</h3>
+            <p>Clients can ask for a waiter, cashier, or order support without waiting at the counter.</p>
+          </article>
+          <article class="info-card">
+            <div class="mini-icon">03</div>
+            <h3>Get notified</h3>
+            <p>Once the cashier marks the order ready, a mobile beep and message alert the customer immediately.</p>
+          </article>
+        </section>
+
+        <section class="card generator-panel">
+          <div class="section-head">
+            <div>
+              <p class="eyebrow accent">Demo setup</p>
+              <h2>Generate QR for a table or outlet</h2>
+            </div>
+            <span class="section-tag">Standalone + API-ready</span>
+          </div>
+
+          <div class="input-grid">
+            <div>
+              <label for="outletNameInput">Outlet name</label>
+              <input id="outletNameInput" type="text" value="Daily Sips" placeholder="Daily Sips" />
+            </div>
+            <div>
+              <label for="outletType">Outlet type</label>
+              <select id="outletType">
+                <option value="restaurant">Restaurant</option>
+                <option value="cafe">Cafe</option>
+              </select>
+            </div>
+            <div>
+              <label for="tableName">Table name</label>
+              <input id="tableName" type="text" value="Table 1" placeholder="Table 1" />
+            </div>
+            <div class="button-wrap">
+              <button id="generateQrBtn">Generate QR</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="card qr-panel">
+          <div id="qrDisplay" class="qr-display empty">
+            <p>Choose a table and generate a QR code.</p>
+          </div>
+          <div class="meta-panel">
+            <h3 id="tableResultTitle">Daily Sips • Table 1</h3>
+            <p>Customers can scan this QR to open their order page, request staff help, and receive a pickup notification without installing an app.</p>
+            <a id="customerLink" href="#" target="_blank" rel="noreferrer">Open table page</a>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/customer.js"></script>
+  </body>
+</html>

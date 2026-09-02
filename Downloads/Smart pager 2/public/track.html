@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Call | Track Your Order</title>
+    <link rel="stylesheet" href="/style.css" />
+    <style>
+      body {
+        display: grid;
+        place-items: center;
+        min-height: 100vh;
+        background: linear-gradient(180deg, #ecfeff 0%, #f8fafc 100%);
+      }
+      .track-card {
+        max-width: 560px;
+        width: 100%;
+        padding: 32px 24px;
+        text-align: center;
+      }
+      .brand-bar {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: #f3f4f6;
+        color: #374151;
+        font-weight: 700;
+        margin-bottom: 14px;
+      }
+      .track-brand-logo {
+        width: 26px;
+        height: 26px;
+        object-fit: contain;
+        border-radius: 8px;
+        background: white;
+      }
+      .status-badge {
+        display: inline-block;
+        background: #dbeafe;
+        color: #1d4ed8;
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .status-text {
+        margin-top: 18px;
+        font-size: clamp(1.8rem, 4vw, 2.6rem);
+        font-weight: 800;
+        color: #111827;
+      }
+      .detail {
+        color: #475569;
+        margin-top: 12px;
+      }
+      .tiny {
+        font-size: 0.9rem;
+        color: #64748b;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card track-card">
+      <div id="brandBar" class="brand-bar"><img src="https://cdn.quickress.com/logo/19_17785102243971.jpeg" alt="Daily Sips logo" class="track-brand-logo"> Call Demo</div>
+      <p class="eyebrow">Order tracker</p>
+      <div id="statusBadge" class="status-badge">Checking</div>
+      <div id="statusText" class="status-text">Loading order status...</div>
+      <p id="detail" class="detail">Please wait while we connect to your order.</p>
+      <p class="tiny">Order ID: <span id="orderId">—</span></p>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      const params = new URLSearchParams(window.location.search);
+      const orderId = params.get('orderId');
+      const outletName = params.get('outlet') || 'Call Demo';
+      const outletType = (params.get('type') || 'restaurant').toLowerCase();
+
+      const statusBadge = document.getElementById('statusBadge');
+      const statusText = document.getElementById('statusText');
+      const detail = document.getElementById('detail');
+      const orderIdLabel = document.getElementById('orderId');
+      const brandBar = document.getElementById('brandBar');
+
+      if (brandBar) {
+        brandBar.innerHTML = `<img src="https://cdn.quickress.com/logo/19_17785102243971.jpeg" alt="Daily Sips logo" class="track-brand-logo"> ${outletType === 'cafe' ? '☕' : '🍽️'} ${outletName}`;
+      }
+
+      if (orderId) {
+        orderIdLabel.textContent = orderId;
+        socket.emit('join_order', { orderId });
+      } else {
+        statusBadge.textContent = 'Missing';
+        statusText.textContent = 'No order found';
+        detail.textContent = 'This page needs an orderId in the URL.';
+      }
+
+      function notifyReady() {
+        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+          navigator.vibrate([220, 80, 220]);
+        }
+
+        try {
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          oscillator.type = 'triangle';
+          oscillator.frequency.value = 880;
+          gainNode.gain.value = 0.08;
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          oscillator.start();
+          setTimeout(() => {
+            oscillator.stop();
+            audioContext.close();
+          }, 400);
+        } catch (error) {
+          console.log('Audio notification not supported in this browser.');
+        }
+      }
+
+      socket.on('order_status', ({ status }) => {
+        if (!status) return;
+
+        const normalized = String(status).toUpperCase();
+        statusBadge.textContent = normalized;
+
+        if (normalized === 'PREPARING') {
+          statusText.textContent = 'Preparing your order';
+          detail.textContent = 'We are preparing your items. You will be notified when it is ready.';
+          statusBadge.style.background = '#dbeafe';
+          statusBadge.style.color = '#1d4ed8';
+        } else if (normalized === 'READY') {
+          statusText.textContent = 'Ready for pickup';
+          detail.textContent = 'Your order is ready at the counter. Please collect it now.';
+          statusBadge.style.background = '#dcfce7';
+          statusBadge.style.color = '#166534';
+          notifyReady();
+        } else if (normalized === 'NOT_FOUND') {
+          statusText.textContent = 'Order not found';
+          detail.textContent = 'This order ID does not exist or has expired.';
+          statusBadge.style.background = '#fee2e2';
+          statusBadge.style.color = '#b91c1c';
+        } else {
+          statusText.textContent = normalized;
+          detail.textContent = 'Your order status has been updated.';
+        }
+      });
+
+      socket.on('order_ready', ({ orderId: readyOrderId, message }) => {
+        if (String(readyOrderId) === String(orderId)) {
+          statusBadge.textContent = 'READY';
+          statusBadge.style.background = '#dcfce7';
+          statusBadge.style.color = '#166534';
+          statusText.textContent = 'Ready for pickup';
+          detail.textContent = message;
+          notifyReady();
+        }
+      });
+    </script>
+  </body>
+</html>

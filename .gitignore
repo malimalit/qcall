@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Dependencies
 node_modules/
 jspm_packages/
@@ -45,3 +46,10 @@ dist/
 build/
 out/
 .next/
+=======
+node_modules/
+.env
+.DS_Store
+public/.DS_Store
+public/Public/
+>>>>>>> bd36a0b475130f9c9f3c7e0736dceb29371b6f10

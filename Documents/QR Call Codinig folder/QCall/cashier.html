@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>QCall - Cashier</title>
+  
+  <!-- Supabase JS Client CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 2rem;
+    }
+    header h1 { font-size: 1.8rem; color: #38bdf8; }
+    .nav-links { display: flex; gap: 0.8rem; }
+    .nav-btn {
+      padding: 0.5rem 1rem;
+      background: #1e293b;
+      color: #38bdf8;
+      border: 1px solid #334155;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: background 0.2s;
+    }
+    .nav-btn:hover { background: #334155; }
+    
+    .new-order-btn {
+      display: block;
+      width: 100%;
+      padding: 1.2rem;
+      background: #38bdf8;
+      color: #0f172a;
+      font-size: 1.3rem;
+      font-weight: 700;
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      margin-bottom: 2rem;
+      transition: opacity 0.2s;
+    }
+    .new-order-btn:hover { opacity: 0.85; }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-title.preparing { color: #fbbf24; }
+    .section-title.called { color: #22c55e; }
+
+    .orders-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+    .order-card {
+      background: #1e293b;
+      border-radius: 14px;
+      padding: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.8rem;
+      border: 2px solid transparent;
+    }
+    .order-card.ready { border-color: #22c55e; }
+    .order-number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: #38bdf8;
+    }
+    .order-time { font-size: 0.85rem; color: #64748b; }
+    .status-badge {
+      padding: 0.3rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+    .status-badge.preparing { background: #fbbf24; color: #0f172a; }
+    .status-badge.ready { background: #22c55e; color: #0f172a; }
+    
+    .call-btn {
+      width: 100%;
+      padding: 0.7rem;
+      background: #22c55e;
+      color: #0f172a;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .call-btn:hover { opacity: 0.85; }
+    .call-btn:disabled {
+      background: #334155;
+      color: #64748b;
+      cursor: default;
+    }
+    .empty { color: #475569; font-size: 0.95rem; margin-bottom: 1.5rem; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚡ QCall — Cashier</h1>
+  <div class="nav-links">
+    <a href="display.html" class="nav-btn">📺 Display</a>
+    <a href="archive.html" class="nav-btn">📁 Archive</a>
+  </div>
+</header>
+
+<button class="new-order-btn" onclick="createOrder()">+ New Order</button>
+
+<!-- PREPARING SECTION -->
+<div class="section-title preparing">🟡 PREPARING (<span id="preparingCount">0</span>)</div>
+<div id="preparingGrid" class="orders-grid">
+  <p class="empty">No orders being prepared.</p>
+</div>
+
+<!-- CALLED SECTION -->
+<div class="section-title called">🟢 CALLED (<span id="calledCount">0</span>)</div>
+<div id="calledGrid" class="orders-grid">
+  <p class="empty">No called orders.</p>
+</div>
+
+<script>
+  // 1. Initialize Supabase Client
+  const SUPABASE_URL = 'https://yhxvvfumlrplgjbryptv.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_jGhRs-maHlZiyyOjgi3GNA_XirF4sJe';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Audio alert function using Web Audio API
+  function playAlertSound() {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5 note
+      oscillator.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.1); // A5 note
+
+      gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.5);
+    } catch (e) {
+      console.log("Audio waiting for user interaction");
+    }
+  }
+
+  // 2. Create a New Order
+  async function createOrder() {
+    const randomOrderNumber = Math.floor(100 + Math.random() * 900).toString();
+
+    const { data, error } = await supabase
+      .from('orders')
+      .insert([
+        { 
+          order_number: randomOrderNumber, 
+          status: 'preparing',
+          items: 'Counter Order'
+        }
+      ])
+      .select();
+
+    if (error) {
+      console.error('Error creating order:', error);
+      alert('Failed to create order. Check console for details.');
+      return;
+    }
+
+    loadOrders();
+  }
+
+  // 3. Call Customer (Updates status from 'preparing' to 'called')
+  async function callOrder(orderId) {
+    const { error } = await supabase
+      .from('orders')
+      .update({ status: 'called' })
+      .eq('id', orderId);
+
+    if (error) {
+      console.error('Error updating order status:', error);
+      alert('Failed to update order status.');
+    } else {
+      loadOrders();
+    }
+  }
+
+  // 4. Fetch and Load Orders from Supabase
+  async function loadOrders() {
+    const { data: orders, error } = await supabase
+      .from('orders')
+      .select('*')
+      .in('status', ['preparing', 'called'])
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching orders:', error);
+      return;
+    }
+
+    renderOrders(orders || []);
+  }
+
+  // 5. Render Orders Split into Preparing & Called Grids
+  function renderOrders(orders) {
+    const preparingGrid = document.getElementById('preparingGrid');
+    const calledGrid = document.getElementById('calledGrid');
+    
+    const preparingOrders = orders.filter(o => o.status === 'preparing');
+    const calledOrders = orders.filter(o => o.status === 'called');
+
+    document.getElementById('preparingCount').textContent = preparingOrders.length;
+    document.getElementById('calledCount').textContent = calledOrders.length;
+
+    // Render Preparing
+    if (!preparingOrders.length) {
+      preparingGrid.innerHTML = '<p class="empty">No orders being prepared.</p>';
+    } else {
+      preparingGrid.innerHTML = preparingOrders.map(order => createOrderCard(order, false)).join('');
+    }
+
+    // Render Called
+    if (!calledOrders.length) {
+      calledGrid.innerHTML = '<p class="empty">No called orders.</p>';
+    } else {
+      calledGrid.innerHTML = calledOrders.map(order => createOrderCard(order, true)).join('');
+    }
+  }
+
+  // Helper function for order cards
+  function createOrderCard(order, isReady) {
+    const timeFormatted = new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `
+      <div class="order-card ${isReady ? 'ready' : ''}">
+        <div class="order-number">#${order.order_number}</div>
+        <div class="order-time">${timeFormatted}</div>
+        <span class="status-badge ${isReady ? 'ready' : 'preparing'}">
+          ${isReady ? 'Ready' : 'Preparing'}
+        </span>
+        <button class="call-btn"
+          onclick="callOrder('${order.id}')"
+          ${isReady ? 'disabled' : ''}>
+          ${isReady ? 'Called ✓' : 'Call Customer'}
+        </button>
+      </div>
+    `;
+  }
+
+  // 6. Realtime Listener with Sound Trigger
+  function setupRealtime() {
+    supabase
+      .channel('public:orders')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+        playAlertSound(); // Play audio alert on any order update!
+        loadOrders();
+      })
+      .subscribe();
+  }
+
+  // Initialize on load
+  window.addEventListener('DOMContentLoaded', () => {
+    loadOrders();
+    setupRealtime();
+  });
+</script>
+</body>
+</html>
