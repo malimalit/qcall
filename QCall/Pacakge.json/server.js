@@ -55,20 +55,21 @@ app.post('/api/clients', async (req, res) => {
                 token: token,
                 plan: plan || 'Active',
                 expires: expires || null
-            }]);
+            }])
+            .select();
 
         if (error) {
-    console.error("Supabase error:", error);
-    return res.status(400).json({ 
-        success: false, 
-        error: error.message || error.details || error.hint || JSON.stringify(error) 
-    });
-}
+            console.error("Supabase insert failed:", error);
+            return res.status(400).json({ 
+                success: false, 
+                error: error.message || error.details || "Database insertion error occurred" 
+            });
+        }
 
         res.status(200).json({ success: true, id: clientId, data });
     } catch (err) {
-        console.error("Server catch error:", err.message);
-        res.status(500).json({ success: false, error: err.message });
+        console.error("Server exception:", err.message);
+        res.status(500).json({ success: false, error: err.message || "Server error" });
     }
 });
 // API Route to Delete Client
