@@ -27,16 +27,12 @@ console.log("DB ready");
 // API Route to Get Clients
 app.get('/api/clients', async (req, res) => {
     try {
-        const { data, error } = await supabase
-            .from('clients')
-            .select('*');
-
-        if (error) throw error;
-        res.status(200).json({ success: true, clients: data });
-    } catch (err) {
-        console.error("Error fetching clients:", err.message);
-        res.status(500).json({ success: false, error: err.message });
-    }
+    app.listen(process.env.PORT || 8080, () => {
+        console.log(`🚀 QCall Server running on port ${process.env.PORT || 8080}`);
+    });
+} catch (err) {
+    console.error("Fatal startup error:", err.message);
+}
 });
 
 // API Route to Add Client with Generated UUID
