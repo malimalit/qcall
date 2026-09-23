@@ -1,18 +1,12 @@
 const express = require('express');
-const http = require('http');
-const path = require('path');
-const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const crypto = require('crypto');
+const path = require('path');
 
 const app = express();
-const server = http.createServer(app);
-
-// Middleware
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
 
-// Initialize Supabase Client using Environment Variables
+// 1. Validate environment variables early
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -20,24 +14,23 @@ if (!supabaseUrl || !supabaseKey) {
   console.error("Missing Supabase environment variables!");
 }
 
+// 2. Initialize Supabase client
 const supabase = createClient(supabaseUrl, supabaseKey);
-
 console.log("DB ready");
 
-// API Route to Get Clients
+// 3. API Route to Get Clients
 app.get('/api/clients', async (req, res) => {
     try {
-    app.listen(process.env.PORT || 8080, () => {
-        console.log(`🚀 QCall Server running on port ${process.env.PORT || 8080}`);
-    });
-} catch (err) {
-    console.error("Fatal startup error:", err.message);
-}
+        const { data, error } = await supabase.from('clients').select('*');
+        if (error) throw error;
+        res.status(200).json({ success: true, data });
+    } catch (err) {
+        console.error("Error fetching clients:", err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
-// API Route to Add Client with Generated UUID
-const crypto = require('crypto'); // Ensure crypto is imported
-
+// 4. API Route to Add Client with Generated UUID
 app.post('/api/clients', async (req, res) => {
     try {
         const clientId = crypto.randomUUID(); 
@@ -59,13 +52,13 @@ app.post('/api/clients', async (req, res) => {
             .select();
 
         if (error) {
-    console.error("Supabase full error object:", JSON.stringify(error, Object.getNames ? Object.getNames(error) : Object.keys(error)));
-    const errorMessage = error.message || error.details || error.hint || error.code || JSON.stringify(error);
-    return res.status(400).json({ 
-        success: false, 
-        error: errorMessage === "{}" ? "Unknown database error (check Railway logs)" : errorMessage 
-    });
-}
+            console.error("Supabase full error object:", JSON.stringify(error, Object.keys(error)));
+            const errorMessage = error.message || error.details || error.hint || error.code || JSON.stringify(error);
+            return res.status(400).json({ 
+                success: false, 
+                error: errorMessage === "{}" ? "Unknown database error (check Railway logs)" : errorMessage 
+            });
+        }
 
         res.status(200).json({ success: true, id: clientId, data });
     } catch (err) {
@@ -73,7 +66,8 @@ app.post('/api/clients', async (req, res) => {
         res.status(500).json({ success: false, error: err.message });
     }
 });
-// API Route to Delete Client
+
+// 5. API Route to Delete Client
 app.delete('/api/clients/:id', async (req, res) => {
     try {
         const { id } = req.params;
@@ -90,12 +84,13 @@ app.delete('/api/clients/:id', async (req, res) => {
     }
 });
 
-// Serve admin page
+// 6. Serve admin page
 app.get('/admin', (req, res) => {
     res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
+// 7. Single unified server listener
 const PORT = process.env.PORT || 8080;
-server.listen(PORT, () => {
+app.listen(PORT, () => {
     console.log(`🚀 QCall Server running on port ${PORT}`);
 });
