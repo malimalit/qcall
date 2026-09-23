@@ -70,18 +70,12 @@ app.post('/api/clients', async (req, res) => {
 // 5. API Route to Delete Client
 app.delete('/api/clients/:id', async (req, res) => {
     try {
-        const { id } = req.params;
-        const { error } = await supabase
-            .from('clients')
-            .delete()
-            .eq('id', id);
-
-        if (error) throw error;
-        res.status(200).json({ success: true });
-    } catch (err) {
-        console.error("Error deleting client:", err.message);
-        res.status(500).json({ success: false, error: err.message });
-    }
+    // If you have a local config read, wrap it like this:
+    // const fs = require('fs');
+    // if (fs.existsSync('./config.json')) { ... }
+} catch (e) {
+    // Ignore missing local config on production
+}
 });
 
 // 6. Serve admin page
