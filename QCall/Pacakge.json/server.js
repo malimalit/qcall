@@ -63,10 +63,11 @@ app.post('/api/clients', async (req, res) => {
             .select();
 
         if (error) {
-    console.error("Supabase detailed error:", JSON.stringify(error, null, 2));
+    console.error("Supabase full error object:", JSON.stringify(error, Object.getNames ? Object.getNames(error) : Object.keys(error)));
+    const errorMessage = error.message || error.details || error.hint || error.code || JSON.stringify(error);
     return res.status(400).json({ 
         success: false, 
-        error: error.message || error.details || error.hint || JSON.stringify(error) 
+        error: errorMessage === "{}" ? "Unknown database error (check Railway logs)" : errorMessage 
     });
 }
 
