@@ -63,9 +63,12 @@ app.post('/api/clients', async (req, res) => {
             .select();
 
         if (error) {
-            console.error("Supabase error:", error);
-            return res.status(400).json({ success: false, error: error.message || error.details });
-        }
+    console.error("Supabase detailed error:", JSON.stringify(error, null, 2));
+    return res.status(400).json({ 
+        success: false, 
+        error: error.message || error.details || error.hint || JSON.stringify(error) 
+    });
+}
 
         res.status(200).json({ success: true, id: clientId, data });
     } catch (err) {
