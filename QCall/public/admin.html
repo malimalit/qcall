@@ -87,19 +87,35 @@
 
     let clients = [];
 
-    async function fetchClients() {
-      try {
-        const response = await fetch('/api/clients');
-        const data = await response.json();
-        if (data.success && Array.isArray(data.clients)) {
-          clients = data.clients;
-          renderClients();
-        }
-      } catch (e) {
-        console.error("Error fetching clients from server", e);
-      }
+    async function add() {
+    const name = document.getElementById("n").value;
+    const phone = document.getElementById("p").value;
+    const instance = document.getElementById("i").value;
+    const token = document.getElementById("t").value;
+    const plan = document.getElementById("pl").value;
+    const expires = document.getElementById("ex") ? document.getElementById("ex").value : null; // Add this line
+
+    if (!name || !instance || !token) {
+        alert("Name+Instance+Token required");
+        return;
     }
 
+    const r = await fetch("/api/clients", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            name,
+            phone,
+            instance,
+            token,
+            plan,
+            expires // Include it here in the payload
+        })
+    });
+    // ... rest of your handler
+}
     function renderClients() {
       if (!clients || clients.length === 0) {
         clientTableBody.innerHTML = `<tr><td colspan="6" class="empty-state">No clients</td></tr>`;
