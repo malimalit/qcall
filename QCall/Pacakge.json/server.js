@@ -67,38 +67,47 @@ app.post('/api/clients', async (req, res) => {
         const clientId = crypto.randomUUID(); 
         const { name, phone, instance, token, plan, expires } = req.body;
 
-        console.log("Generated clientId:", clientId);
+        console.log("Incoming client data:", { name, phone, instance, plan, expires });
+
+        const insertPayload = { 
+            id: clientId, 
+            name: name, 
+            phone: phone, 
+            instance: instance, 
+            token: token,
+            plan: plan || 'Active',
+            expires: expires || null
+        };
 
         const { data, error } = await supabase
             .from('clients')
-            .insert([{ 
-                id: clientId, 
-                name: name, 
-                phone: phone, 
-                instance: instance, 
-                token: token,
-                plan: plan || 'Active',
-                expires: expires || null
-            }])
+            .insert([insertPayload])
             .select();
 
         if (error) {
-            console.error("Supabase full error object:", JSON.stringify(error));
+            console.error("Supabase insert error raw:", error);
             return res.status(400).json({ 
                 success: false, 
-                error: typeof error === 'object' ? JSON.stringify(error) : String(error)
+                error: "DB_ERROR", 
+                details: error,
+                rawMessage: error.message || "No message",
+                rawCode: error.code || "No code"
             });
         }
 
-        // Optional: Send a welcome/test message via UltraMsg if phone exists
         if (phone) {
             await sendUltraMsgMessage(phone, `Hello ${name || 'Client'}, welcome to QCall! Your account is active.`);
         }
 
         res.status(200).json({ success: true, id: clientId, data });
     } catch (err) {
-        console.error("Server exception:", err);
-        res.status(500).json({ success: false, error: err.message || String(err) });
+        console.error("Server catch exception:", err);
+        res.status(500).json({ 
+            success: false, 
+            error: "SERVER_EXCEPTION", 
+            message: err.message, 
+            stack: err.stack 
+        });
     }
 });
 
