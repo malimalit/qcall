@@ -18,6 +18,37 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 console.log("DB ready");
 
+// --- ULTRA-MSG FUNCTION USING NATIVE FETCH ---
+async function sendUltraMsgMessage(phone, message) {
+    const instanceId = process.env.ULTRAMSG_INSTANCE_ID || 'instance188449';
+    const token = process.env.ULTRAMSG_TOKEN || '6ocaa7cx7sq050ht';
+
+    const url = `https://api.ultramsg.com/${instanceId}/messages/chat`;
+    
+    const bodyParams = new URLSearchParams({
+        token: token,
+        to: phone,
+        body: message || 'Hello from QCall!'
+    });
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: bodyParams
+        });
+
+        const result = await response.json();
+        console.log("UltraMsg response:", result);
+        return { success: true, data: result };
+    } catch (error) {
+        console.error("Error sending UltraMsg message:", error.message);
+        return { success: false, error: error.message };
+    }
+}
+
 // 3. API Route to Get Clients
 app.get('/api/clients', async (req, res) => {
     try {
@@ -60,6 +91,11 @@ app.post('/api/clients', async (req, res) => {
             });
         }
 
+        // Optional: Send a welcome/test message via UltraMsg upon client addition if phone exists
+        if (phone) {
+            await sendUltraMsgMessage(phone, `Hello ${name || 'Client'}, welcome to QCall! Your account is active.`);
+        }
+
         res.status(200).json({ success: true, id: clientId, data });
     } catch (err) {
         console.error("Server exception:", err.message);
@@ -67,7 +103,7 @@ app.post('/api/clients', async (req, res) => {
     }
 });
 
-// 5. API Route to Delete Client (Fixed)
+// 5. API Route to Delete Client
 app.delete('/api/clients/:id', async (req, res) => {
     try {
         const clientId = req.params.id;
