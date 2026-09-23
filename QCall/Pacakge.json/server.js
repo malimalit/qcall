@@ -20,7 +20,7 @@ console.log("DB ready");
 
 // --- ULTRA-MSG FUNCTION USING NATIVE FETCH ---
 async function sendUltraMsgMessage(phone, message) {
-    const instanceId = process.env.ULTRAMSG_INSTANCE_ID || 'instance188449';
+    const instanceId = process.env.ULTRAMSG_INSTANCE_ID || process.env.ULTRAMSG_INSTANCE || 'instance188449';
     const token = process.env.ULTRAMSG_TOKEN || '6ocaa7cx7sq050ht';
 
     const url = `https://api.ultramsg.com/${instanceId}/messages/chat`;
@@ -83,23 +83,22 @@ app.post('/api/clients', async (req, res) => {
             .select();
 
         if (error) {
-            console.error("Supabase full error object:", JSON.stringify(error, Object.keys(error)));
-            const errorMessage = error.message || error.details || error.hint || error.code || JSON.stringify(error);
+            console.error("Supabase full error object:", JSON.stringify(error));
             return res.status(400).json({ 
                 success: false, 
-                error: errorMessage === "{}" ? "Unknown database error (check Railway logs)" : errorMessage 
+                error: typeof error === 'object' ? JSON.stringify(error) : String(error)
             });
         }
 
-        // Optional: Send a welcome/test message via UltraMsg upon client addition if phone exists
+        // Optional: Send a welcome/test message via UltraMsg if phone exists
         if (phone) {
             await sendUltraMsgMessage(phone, `Hello ${name || 'Client'}, welcome to QCall! Your account is active.`);
         }
 
         res.status(200).json({ success: true, id: clientId, data });
     } catch (err) {
-        console.error("Server exception:", err.message);
-        res.status(500).json({ success: false, error: err.message });
+        console.error("Server exception:", err);
+        res.status(500).json({ success: false, error: err.message || String(err) });
     }
 });
 
