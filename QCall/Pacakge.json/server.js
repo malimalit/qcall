@@ -14,7 +14,7 @@ if (!supabaseUrl || !supabaseKey) {
   console.error("Missing Supabase environment variables!");
 }
 
-// 2. Initialize Supabase client
+// 2. Initialize Supabase client once
 const supabase = createClient(supabaseUrl, supabaseKey);
 console.log("DB ready");
 
@@ -67,15 +67,21 @@ app.post('/api/clients', async (req, res) => {
     }
 });
 
-// 5. API Route to Delete Client
+// 5. API Route to Delete Client (Fixed)
 app.delete('/api/clients/:id', async (req, res) => {
     try {
-    // If you have a local config read, wrap it like this:
-    // const fs = require('fs');
-    // if (fs.existsSync('./config.json')) { ... }
-} catch (e) {
-    // Ignore missing local config on production
-}
+        const clientId = req.params.id;
+        const { error } = await supabase
+            .from('clients')
+            .delete()
+            .eq('id', clientId);
+
+        if (error) throw error;
+        res.status(200).json({ success: true, message: "Client deleted" });
+    } catch (err) {
+        console.error("Error deleting client:", err.message);
+        res.status(500).json({ success: false, error: err.message });
+    }
 });
 
 // 6. Serve admin page
