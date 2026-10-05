@@ -1,140 +1,69 @@
 const express = require('express');
-const { createClient } = require('@supabase/supabase-js');
-const crypto = require('crypto');
 const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
+const PORT = process.env.PORT || 8080;
+
+// Middleware to parse JSON bodies
 app.use(express.json());
+// Serve static files from the 'public' folder
+app.use(express.static(path.join(__dirname, 'public')));
 
-// 1. Validate environment variables early
+// Initialize Supabase Client
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error("Missing Supabase environment variables!");
-}
-
-// 2. Initialize Supabase client once
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
-console.log("DB ready");
 
-// --- ULTRA-MSG FUNCTION USING NATIVE FETCH ---
-async function sendUltraMsgMessage(phone, message) {
-    const instanceId = process.env.ULTRAMSG_INSTANCE_ID || process.env.ULTRAMSG_INSTANCE || 'instance188449';
-    const token = process.env.ULTRAMSG_TOKEN || '6ocaa7cx7sq050ht';
+// Route for Admin Dashboard page
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
 
-    const url = `https://api.ultramsg.com/${instanceId}/messages/chat`;
-    
-    const bodyParams = new URLSearchParams({
-        token: token,
-        to: phone,
-        body: message || 'Hello from QCall!'
-    });
-
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded'
-            },
-            body: bodyParams
-        });
-
-        const result = await response.json();
-        console.log("UltraMsg response:", result);
-        return { success: true, data: result };
-    } catch (error) {
-        console.error("Error sending UltraMsg message:", error.message);
-        return { success: false, error: error.message };
-    }
-}
-
-// 3. API Route to Get Clients
+// API: Get all clients
 app.get('/api/clients', async (req, res) => {
     try {
         const { data, error } = await supabase.from('clients').select('*');
         if (error) throw error;
-        res.status(200).json({ success: true, data });
+        res.json({ success: true, data });
     } catch (err) {
         console.error("Error fetching clients:", err.message);
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// 4. API Route to Add Client with Generated UUID
+// API: Add a new client
 app.post('/api/clients', async (req, res) => {
     try {
-        const clientId = crypto.randomUUID(); 
         const { name, phone, instance, token, plan, expires } = req.body;
-
-        console.log("Incoming client data:", { name, phone, instance, plan, expires });
-
-        const insertPayload = { 
-            id: clientId, 
-            name: name, 
-            phone: phone, 
-            instance: instance, 
-            token: token,
-            plan: plan || 'Active',
-            expires: expires || null
-        };
 
         const { data, error } = await supabase
             .from('clients')
-            .insert([insertPayload])
-            .select();
+            .insert([{ name, phone, instance, token, plan, expires }]);
 
-        if (error) {
-            console.error("Supabase insert error raw:", error);
-            return res.status(400).json({ 
-                success: false, 
-                error: "DB_ERROR", 
-                details: error,
-                rawMessage: error.message || "No message",
-                rawCode: error.code || "No code"
-            });
-        }
-
-        if (phone) {
-            await sendUltraMsgMessage(phone, `Hello ${name || 'Client'}, welcome to QCall! Your account is active.`);
-        }
-
-        res.status(200).json({ success: true, id: clientId, data });
+        if (error) throw error;
+        res.json({ success: true, data });
     } catch (err) {
-        console.error("Server catch exception:", err);
-        res.status(500).json({ 
-            success: false, 
-            error: "SERVER_EXCEPTION", 
-            message: err.message, 
-            stack: err.stack 
-        });
+        console.error("Error adding client:", err.message);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// 5. API Route to Delete Client
+// API: Delete a client
 app.delete('/api/clients/:id', async (req, res) => {
     try {
-        const clientId = req.params.id;
-        const { error } = await supabase
-            .from('clients')
-            .delete()
-            .eq('id', clientId);
+        const { id } = req.params;
+        const { error } = await supabase.from('clients').delete().eq('id', id);
 
         if (error) throw error;
-        res.status(200).json({ success: true, message: "Client deleted" });
+        res.json({ success: true });
     } catch (err) {
         console.error("Error deleting client:", err.message);
         res.status(500).json({ success: false, error: err.message });
     }
 });
 
-// 6. Serve admin page
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'admin.html'));
-});
-
-// 7. Single unified server listener
-const PORT = process.env.PORT || 8080;
+// Start Server
 app.listen(PORT, () => {
     console.log(`🚀 QCall Server running on port ${PORT}`);
 });
